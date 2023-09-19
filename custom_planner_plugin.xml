@@ -1,0 +1,10 @@
+<class_libraries>
+    <library path="local_planner">
+        <class type="local_planner::CustomPlanner" base_class_type="nav2_core::Controller">
+            <description>
+                Custom local planner created for dissertation
+            </description>
+        </class>
+    </library>
+</class_libraries>
+
