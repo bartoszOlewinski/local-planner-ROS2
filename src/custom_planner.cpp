@@ -1,9 +1,4 @@
 // includes for libraries
-
-// includes for files
-#include "local_planner/custom_planner.hpp"
-
-#include "sensor_msgs/msg/laser_scan.hpp"
 #include <algorithm>
 #include <string>
 #include <limits>
@@ -11,6 +6,9 @@
 #include <vector>
 #include <utility>
 
+// includes for files
+#include "local_planner/custom_planner.hpp"
+#include "sensor_msgs/msg/laser_scan.hpp"
 #include "nav2_core/exceptions.hpp"
 #include "nav2_util/node_utils.hpp"
 #include "nav2_util/geometry_utils.hpp"
@@ -26,8 +24,8 @@ namespace local_planner
     Cleans up resources used by the plugin
     */
     void CustomPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr &parent,
-    std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
-    std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
+                                  std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
+                                  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
     {
         auto node = parent.lock();
         node_ = parent;
@@ -56,6 +54,10 @@ namespace local_planner
             node, plugin_name_ + ".max_angular_vel", rclcpp::ParameterValue(1.0));
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".transform_tolerance", rclcpp::ParameterValue(0.1));
+        declare_parameter_if_not_declared(
+            node, plugin_name_ + ".step_length", rclcpp::ParameterValue(1.0));
+        declare_parameter_if_not_declared(
+            node, plugin_name_ + ".distance_to_global_factor", rclcpp::ParameterValue(1.0))
 
         node->get_parameter(plugin_name_ + ".desired_linear_vel", desired_linear_vel_);
         node->get_parameter(plugin_name_ + ".lookahead_dist", lookahead_dist_);
@@ -63,6 +65,8 @@ namespace local_planner
         double transform_tolerance;
         node->get_parameter(plugin_name_ + ".transform_tolerance", transform_tolerance);
         transform_tolerance_ = rclcpp::Duration::from_seconds(transform_tolerance);
+        node->get_parameter(plugin_name_ + ".step_length", step_length);
+        node->get_parameter(plugin_name_ + ".distance_to_global_factor", distance_to_global_factor);
 
         global_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 1);
     }
@@ -96,16 +100,62 @@ namespace local_planner
     geometry_msgs::msg::TwistStamped CustomPlanner::computeVelocityCommands(
         const geometry_msgs::msg::PoseStamped &pose,
         const geometry_msgs::msg::Twist &,
-        nav2_core::GoalChecker *)
+        nav2_core::GoalChecker *goal_checker)
     {
 
-        auto transformed_plan = transformGlobalPlan(pose);
+        auto goal_pose = std::find_if(
+                             global_plan_.poses.begin(), global_plan_.poses.end(),
+                             [&](const auto &global_plan_pose)
+                             {
+                                 return hypot(
+                                            global_plan_pose.pose.position.x,
+                                            global_plan_pose.pose.position.y) >= lookahead_dist_;
+                             })
+                             ->pose;
+
+        double linear_vel, angular_vel;
+
+
+        //check what paths to take
+        //EightCoordinationPart eighthCoordPart;
+
+        //first check if pose is behind
+        if (goal_pose.position.x < 0) {
+            //then check if it's on the left side or behind
+            if (goal_pose.position.y >= 0) {
+                
+
+
+            } //if not check if it's on right side or behind
+            else if (goal_pose.position.y <= 0) {
+
+            }
+            //if it's in front of the robot
+        } else {
+            //if it's on the left side or in front
+            if (goal_pose.position.y >= 0) {
+
+
+
+
+                //if it's on the right side
+            } else {
+
+            }
+        }
+
+
 
         geometry_msgs::msg::TwistStamped cmd_vel;
+        cmd_vel.header.frame_id = pose.header.frame_id;
+        cmd_vel.header.stamp = clock->now();
 
-        cmd_vel.twist.linear.x = desired_linear_vel_;
+        //cmd_vel.twist.linear.x = desired_linear_vel_;
         return cmd_vel;
     }
+
+    void checkTheEndingPoints
+
 
     void CustomPlanner::setSpeedLimit(
         const double &speed_limit,
@@ -115,7 +165,7 @@ namespace local_planner
         if (percentage)
         {
             // Speed limit is expressed in % from maximum speed of robot
-            desired_linear_vel_ = 2.0* speed_limit / 100.0;
+            desired_linear_vel_ = 2.0 * speed_limit / 100.0;
         }
         else
         {
@@ -207,9 +257,12 @@ namespace local_planner
 
     void CustomPlanner::incomingRanges(const sensor_msgs::msg::LaserScan &msg)
     {
-        for (int i = 0; i < 720; i++)
+        for (int i = 0; i < NUMBER_OF_LIDAR_READINGS; i++)
         {
-            std::cout << msg.ranges[i] << std::endl;
+
+            this->ranges[i] = msg.ranges[i];
+
+            std::cout << this->ranges[i] << std::endl;
 
             // RCLCPP_INFO(this->get_logger(), "Lidar range message: '%f'", msg.ranges[i]);
         }

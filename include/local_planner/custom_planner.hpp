@@ -21,7 +21,6 @@
 #include "pluginlib/class_list_macros.hpp"
 #include "geometry_msgs/msg/pose2_d.hpp"
 
-
 namespace local_planner
 {
 
@@ -47,7 +46,7 @@ namespace local_planner
         geometry_msgs::msg::TwistStamped computeVelocityCommands(
             const geometry_msgs::msg::PoseStamped &pose,
             const geometry_msgs::msg::Twist &,
-            nav2_core::GoalChecker *) override;
+            nav2_core::GoalChecker *goal_checker) override;
 
         // mandatory override
         void setSpeedLimit(const double &speed_limit, const bool &percentage) override;
@@ -75,19 +74,32 @@ namespace local_planner
         double lookahead_dist_;
         double max_angular_vel_;
         rclcpp::Duration transform_tolerance_{0, 0};
+        float step_length;
+        double distance_to_global_factor;
 
         nav_msgs::msg::Path global_plan_;
         std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> global_pub_;
 
         // VARIABLES FOR THIS PLANNER
         const int ADJACENT_PATH_CONSIDERATION_NUMBER = 20;
-
-        float ranges[720];
+        float ranges[360];
+        const int NUMBER_OF_LIDAR_READINGS = 360;
 
         void incomingRanges(const sensor_msgs::msg::LaserScan &msg);
 
         rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_sub_;
     };
+
+    enum EightCoordinationPart {
+        NorthWestUpper,
+        NorthWestLower,
+        SouthWestUpper,
+        SouthWestLower,
+        SouthEastLower,
+        SouthEastUpper,
+        NorthEastLower,
+        NorthEastUpper
+    }
 
 }
 
