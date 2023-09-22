@@ -152,6 +152,7 @@ namespace local_planner
         if (goal_pose.position.x > 0){
             if (goal_pose.position.y == 0) { //if straight ahead, case 0
 
+                
 
 
                 
