@@ -74,8 +74,11 @@ namespace local_planner
         double lookahead_dist_;
         double max_angular_vel_;
         rclcpp::Duration transform_tolerance_{0, 0};
-        float step_length;
-        double distance_to_global_factor;
+        float single_local_plan_length;
+        double distance_global_score_factor;
+        double distance_goal_score_factor;
+        int local_plan_laserscan_number;
+        int local_plan_projection_number;
 
         nav_msgs::msg::Path global_plan_;
         std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> global_pub_;

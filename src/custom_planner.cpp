@@ -57,7 +57,15 @@ namespace local_planner
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".single_local_plan_length", rclcpp::ParameterValue(1.0));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".distance_global_score_factor", rclcpp::ParameterValue(1.0));
+            node, plugin_name_ + ".distance_global_score_factor", rclcpp::ParameterValue(1.0)); //CHANGE THE VALUE
+        declare_parameter_if_not_declared(
+            node, plugin_name_ + ".distance_goal_score_factor", rclcpp::ParameterValue(1.0)); //CHANGE THE VALUE
+        declare_parameter_if_not_declarted(
+            node, plugin_name_ + ".local_plan_laserscan_number", rclcpp::ParameterValue(10));
+        declare_parameter_if_not_declared(
+            node, plugin_name_ + ".local_plan_projection_number", rclcpp::ParameterValue(10));
+        
+        
 
         node->get_parameter(plugin_name_ + ".desired_linear_vel", desired_linear_vel_);
         node->get_parameter(plugin_name_ + ".lookahead_dist", lookahead_dist_);
@@ -65,8 +73,11 @@ namespace local_planner
         double transform_tolerance;
         node->get_parameter(plugin_name_ + ".transform_tolerance", transform_tolerance);
         transform_tolerance_ = rclcpp::Duration::from_seconds(transform_tolerance);
-        node->get_parameter(plugin_name_ + ".single_local_plan_length", step_length);
-        node->get_parameter(plugin_name_ + ".distance_global_score_factor", distance_to_global_factor);
+        node->get_parameter(plugin_name_ + ".single_local_plan_length", single_local_plan_length);
+        node->get_parameter(plugin_name_ + ".distance_global_score_factor", distance_global_score_factor);
+        node->get_parameter(plugin_name_ + ".distance_goal_score_factor",  distance_goal_score_factor);
+        node->get_parameter(plugin_name_ + ".local_plan_laserscan_number", local_plan_laserscan_number);
+        node->get_parameter(plugin_name_ + ".local_plan_projection_number", local_plan_projection_number);
 
         global_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 1);
     }
