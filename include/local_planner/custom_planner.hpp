@@ -63,6 +63,8 @@ namespace local_planner
             geometry_msgs::msg::PoseStamped &out_pose,
             const rclcpp::Duration &transform_tolerance) const;
 
+        geometry_msgs::msg::TwistStamped pickPath(int side)
+
         rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
         std::shared_ptr<tf2_ros::Buffer> tf_;
         std::string plugin_name_;

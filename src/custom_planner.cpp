@@ -63,11 +63,11 @@ namespace local_planner
         declare_parameter_if_not_declarted(
             node, plugin_name_ + ".local_plan_laserscan_number", rclcpp::ParameterValue(10));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".local_plan_projection_number", rclcpp::ParameterValue(10));
+            node, plugin_name_ + ".local_plan_projection_number", rclcpp::ParameterValue(9));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".local_plan_projection_angle_factor", rclcpp::ParameterValue(1.0));
+            node, plugin_name_ + ".local_plan_projection_angle_factor", rclcpp::ParameterValue(1.5));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".vel_reduction_factor", rclcpp::ParameterValue(0.4));#
+            node, plugin_name_ + ".vel_reduction_factor", rclcpp::ParameterValue(0.4));
         
     
 
@@ -145,32 +145,43 @@ namespace local_planner
         angular_vel = 0.0;
 
         // first check if pose is in front
-        if (goal_pose.position.x > 0)
-        {
-            // then check if it's on the left side or in front
-            if (goal_pose.position.y >= 0)
+        if (goal_pose.position.x > 0){
+            if (goal_pose.position.y == 0) { //if straight ahead, case 0
+
+                
+            } else if (goal_pose.position.x >= goal_pose.position.y)// then check if it's case 1, northeast upper
             {
 
 
-            } // if not check if it's on right side
-            else
+            } 
+            else if (goal_pose.position.y > goal_pose.position.x)// if not then case 2, northeast lower
             {
                 
 
+                
+            } else if (-(goal_pose.position.y) > goal_pose.position.x) {//case 5, northwest lower
+
+
+
+
+            } else if (goal_pose.position.x > -(goal_pose.position.y)) {//case 6, northwest upper
+
+
+
             }
-            // if it's behind the robot
         }
-        else
+        else if //if goal is behind or x == 0 meaning straight to the side
         {
-            // if it's on the left side or behind
-            if (goal_pose.position.y >= 0)
+            if (goal_pose.position.y >= 0)// if it's on the left side or behind
             {
 
 
-                // if it's on the right side or behind
+                
             }
-            else if (goal_pose.position.y < 0)
+            else if (goal_pose.position.y <= 0)// if it's on the right side or behind
             {
+
+
 
             }
         }
