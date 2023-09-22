@@ -63,7 +63,6 @@ namespace local_planner
             geometry_msgs::msg::PoseStamped &out_pose,
             const rclcpp::Duration &transform_tolerance) const;
 
-        geometry_msgs::msg::TwistStamped pickPath(int side)
 
         rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
         std::shared_ptr<tf2_ros::Buffer> tf_;
@@ -82,7 +81,17 @@ namespace local_planner
         int local_plan_laserscan_number;
         int local_plan_projection_number;
         double vel_reduction_factor;
-        double local_plan_projection_angle_factor;
+        double local_plan_rotation_rate_factor;
+        double local_plan_rotation_rate;
+
+
+        typedef std::vector<std::tuple<double, double>> velocities;
+
+        //angular velocities for subsuquent path from left to righ, with 0 being the root path going straight
+        //arithmetic sequence with factor 0.25
+        double angular_velocities_preset[9] = {-1.0, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1};
+
+        const double EFFECTIVE_TRACK_WIDTH = 0.555;
 
         nav_msgs::msg::Path global_plan_;
         std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> global_pub_;

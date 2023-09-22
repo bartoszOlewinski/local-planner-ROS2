@@ -60,12 +60,14 @@ namespace local_planner
             node, plugin_name_ + ".distance_global_score_factor", rclcpp::ParameterValue(1.0)); // CHANGE THE VALUE
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".distance_goal_score_factor", rclcpp::ParameterValue(1.0)); // CHANGE THE VALUE
-        declare_parameter_if_not_declarted(
+        declare_parameter_if_not_declared(
             node, plugin_name_ + ".local_plan_laserscan_number", rclcpp::ParameterValue(10));
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".local_plan_projection_number", rclcpp::ParameterValue(9));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".local_plan_projection_angle_factor", rclcpp::ParameterValue(1.5));
+            node, plugin_name_ + ".local_plan_rotation_rate_factor", rclcpp::ParameterValue(1.5));
+        declare_parameter_if_not_declared(
+            node, plugin_name_ + ".local_plan_rotation_rate", rclcpp::ParameterValue(1));
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".vel_reduction_factor", rclcpp::ParameterValue(0.4));
         
@@ -86,7 +88,8 @@ namespace local_planner
         node->get_parameter(plugin_name_ + ".distance_goal_score_factor", distance_goal_score_factor);
         node->get_parameter(plugin_name_ + ".local_plan_laserscan_number", local_plan_laserscan_number);
         node->get_parameter(plugin_name_ + ".local_plan_projection_number", local_plan_projection_number);
-        node->get_parameter(plugin_name_ + ".local_plan_projection_angle_factor", local_plan_projection_angle_factor);
+        node->get_parameter(plugin_name_ + ".local_plan_rotation_rate_factor", local_plan_rotation_rate_factor);
+        node->get_parameter(plugin_name_ + ".local_plan_rotation_rate", local_plan_rotation_rate);
         node->get_parameter(plugin_name_ + ".vel_reduction_factor", vel_reduction_factor);
 
         global_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 1);
@@ -141,12 +144,15 @@ namespace local_planner
         auto goal_pose = goal_pose_it->pose;
 
         double linear_vel, angular_vel;
-        linear_vel = 1.0;
+        linear_vel = 1.0 * vel_factor;
         angular_vel = 0.0;
+
 
         // first check if pose is in front
         if (goal_pose.position.x > 0){
             if (goal_pose.position.y == 0) { //if straight ahead, case 0
+
+
 
                 
             } else if (goal_pose.position.x >= goal_pose.position.y)// then check if it's case 1, northeast upper
@@ -164,13 +170,13 @@ namespace local_planner
 
 
 
-            } else if (goal_pose.position.x > -(goal_pose.position.y)) {//case 6, northwest upper
+            } else if (goal_pose.position.x >= -(goal_pose.position.y)) {//case 6, northwest upper
 
 
 
             }
         }
-        else if //if goal is behind or x == 0 meaning straight to the side
+        else //if goal is behind or x == 0 meaning straight to the side
         {
             if (goal_pose.position.y >= 0)// if it's on the left side or behind
             {
