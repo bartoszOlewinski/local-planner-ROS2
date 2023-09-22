@@ -64,6 +64,14 @@ namespace local_planner
             node, plugin_name_ + ".local_plan_laserscan_number", rclcpp::ParameterValue(10));
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".local_plan_projection_number", rclcpp::ParameterValue(10));
+        declare_parameter_if_not_declared(
+            node, plugin_name_ + ".local_plan_projection_angle_factor", rclcpp::ParameterValue(1.0));
+        declare_parameter_if_not_declared(
+            node, plugin_name_ + ".vel_reduction_factor", rclcpp::ParameterValue(0.4));#
+        
+    
+
+
 
         node->get_parameter(plugin_name_ + ".desired_linear_vel", desired_linear_vel_);
         node->get_parameter(plugin_name_ + ".lookahead_dist", lookahead_dist_);
@@ -78,6 +86,8 @@ namespace local_planner
         node->get_parameter(plugin_name_ + ".distance_goal_score_factor", distance_goal_score_factor);
         node->get_parameter(plugin_name_ + ".local_plan_laserscan_number", local_plan_laserscan_number);
         node->get_parameter(plugin_name_ + ".local_plan_projection_number", local_plan_projection_number);
+        node->get_parameter(plugin_name_ + ".local_plan_projection_angle_factor", local_plan_projection_angle_factor);
+        node->get_parameter(plugin_name_ + ".vel_reduction_factor", vel_reduction_factor);
 
         global_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 1);
     }
@@ -120,9 +130,12 @@ namespace local_planner
             { return hypot(ps.pose.position.x, ps.pose.position.y) >= lookahead_dist_; });
 
         // If the last pose is still within lookahed distance, take the last pose
+        double vel_factor = 1.0;
         if (goal_pose_it == transformed_plan.poses.end())
         {
             goal_pose_it = std::prev(transformed_plan.poses.end());
+            //if the end pose is closer that 1.0m reduce vel_factor so the velocity of the robot is smaller
+            vel_factor = vel_reduction_factor;
         }
 
         auto goal_pose = goal_pose_it->pose;
@@ -158,7 +171,7 @@ namespace local_planner
             }
             else if (goal_pose.position.y < 0)
             {
-                
+
             }
         }
 

@@ -79,6 +79,8 @@ namespace local_planner
         double distance_goal_score_factor;
         int local_plan_laserscan_number;
         int local_plan_projection_number;
+        double vel_reduction_factor;
+        double local_plan_projection_angle_factor;
 
         nav_msgs::msg::Path global_plan_;
         std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> global_pub_;
