@@ -65,9 +65,9 @@ namespace local_planner
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".local_plan_projection_number", rclcpp::ParameterValue(9));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".local_plan_rotation_rate_factor", rclcpp::ParameterValue(1.5));
+            node, plugin_name_ + ".local_plan_rotation_rate_factor", rclcpp::ParameterValue(0.02));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".local_plan_rotation_rate", rclcpp::ParameterValue(1));
+            node, plugin_name_ + ".local_plan_rotation_rate", rclcpp::ParameterValue(0));
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".vel_reduction_factor", rclcpp::ParameterValue(0.4));
         
@@ -152,7 +152,7 @@ namespace local_planner
         if (goal_pose.position.x > 0){
             if (goal_pose.position.y == 0) { //if straight ahead, case 0
 
-                
+
 
 
                 
