@@ -57,25 +57,25 @@ namespace local_planner
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".single_local_plan_length", rclcpp::ParameterValue(1.0));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".distance_global_score_factor", rclcpp::ParameterValue(1.0)); //CHANGE THE VALUE
+            node, plugin_name_ + ".distance_global_score_factor", rclcpp::ParameterValue(1.0)); // CHANGE THE VALUE
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".distance_goal_score_factor", rclcpp::ParameterValue(1.0)); //CHANGE THE VALUE
+            node, plugin_name_ + ".distance_goal_score_factor", rclcpp::ParameterValue(1.0)); // CHANGE THE VALUE
         declare_parameter_if_not_declarted(
             node, plugin_name_ + ".local_plan_laserscan_number", rclcpp::ParameterValue(10));
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".local_plan_projection_number", rclcpp::ParameterValue(10));
-        
-        
 
         node->get_parameter(plugin_name_ + ".desired_linear_vel", desired_linear_vel_);
         node->get_parameter(plugin_name_ + ".lookahead_dist", lookahead_dist_);
         node->get_parameter(plugin_name_ + ".max_angular_vel", max_angular_vel_);
+
         double transform_tolerance;
         node->get_parameter(plugin_name_ + ".transform_tolerance", transform_tolerance);
         transform_tolerance_ = rclcpp::Duration::from_seconds(transform_tolerance);
+
         node->get_parameter(plugin_name_ + ".single_local_plan_length", single_local_plan_length);
         node->get_parameter(plugin_name_ + ".distance_global_score_factor", distance_global_score_factor);
-        node->get_parameter(plugin_name_ + ".distance_goal_score_factor",  distance_goal_score_factor);
+        node->get_parameter(plugin_name_ + ".distance_goal_score_factor", distance_goal_score_factor);
         node->get_parameter(plugin_name_ + ".local_plan_laserscan_number", local_plan_laserscan_number);
         node->get_parameter(plugin_name_ + ".local_plan_projection_number", local_plan_projection_number);
 
@@ -115,9 +115,15 @@ namespace local_planner
     {
 
         auto transformed_plan = transformGlobalPlan(pose);
+        auto goal_pose_it = std::find_if(
+            transformed_plan.poses.begin(), transformed_plan.poses.end(), [&](const auto &ps)
+            { return hypot(ps.pose.position.x, ps.pose.position.y) >= lookahead_dist_; });
 
-
-        auto goal_pose_it = std::prev(transformed_plan.poses.end());
+        // If the last pose is still within lookahed distance, take the last pose
+        if (goal_pose_it == transformed_plan.poses.end())
+        {
+            goal_pose_it = std::prev(transformed_plan.poses.end());
+        }
 
         auto goal_pose = goal_pose_it->pose;
 
@@ -131,16 +137,13 @@ namespace local_planner
             // then check if it's on the left side or in front
             if (goal_pose.position.y >= 0)
             {
-                linear_vel = 1.0;
-                angular_vel = 0.3;
-                //std::cout << "GOAL DETECTED FRONT LEFT" << std::endl;
+
 
             } // if not check if it's on right side
             else
             {
-                linear_vel = 1.0;
-                angular_vel = -0.3;
-                //std::cout << "GOAL DETECTED FRONT RIGHT" << std::endl;
+                
+
             }
             // if it's behind the robot
         }
@@ -149,17 +152,13 @@ namespace local_planner
             // if it's on the left side or behind
             if (goal_pose.position.y >= 0)
             {
-                linear_vel = 0.3;
-                angular_vel = 1.0;
-                //std::cout << "GOAL DETECTED BACK LEFT" << std::endl;
+
 
                 // if it's on the right side or behind
             }
             else if (goal_pose.position.y < 0)
             {
-                linear_vel = 0.3;
-                angular_vel = -1.0;
-                //std::cout << "GOAL DETECTED BACK RIGHT" << std::endl;
+                
             }
         }
 
