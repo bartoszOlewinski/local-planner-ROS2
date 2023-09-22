@@ -46,7 +46,7 @@ namespace local_planner
         geometry_msgs::msg::TwistStamped computeVelocityCommands(
             const geometry_msgs::msg::PoseStamped &pose,
             const geometry_msgs::msg::Twist &,
-            nav2_core::GoalChecker *goal_checker) override;
+            nav2_core::GoalChecker *) override;
 
         // mandatory override
         void setSpeedLimit(const double &speed_limit, const bool &percentage) override;
@@ -89,17 +89,6 @@ namespace local_planner
 
         rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_sub_;
     };
-
-    enum EightCoordinationPart {
-        NorthWestUpper,
-        NorthWestLower,
-        SouthWestUpper,
-        SouthWestLower,
-        SouthEastLower,
-        SouthEastUpper,
-        NorthEastLower,
-        NorthEastUpper
-    }
 
 }
 

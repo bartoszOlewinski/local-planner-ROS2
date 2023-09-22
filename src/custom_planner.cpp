@@ -55,9 +55,9 @@ namespace local_planner
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".transform_tolerance", rclcpp::ParameterValue(0.1));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".step_length", rclcpp::ParameterValue(1.0));
+            node, plugin_name_ + ".single_local_plan_length", rclcpp::ParameterValue(1.0));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".distance_to_global_factor", rclcpp::ParameterValue(1.0))
+            node, plugin_name_ + ".distance_global_score_factor", rclcpp::ParameterValue(1.0));
 
         node->get_parameter(plugin_name_ + ".desired_linear_vel", desired_linear_vel_);
         node->get_parameter(plugin_name_ + ".lookahead_dist", lookahead_dist_);
@@ -65,8 +65,8 @@ namespace local_planner
         double transform_tolerance;
         node->get_parameter(plugin_name_ + ".transform_tolerance", transform_tolerance);
         transform_tolerance_ = rclcpp::Duration::from_seconds(transform_tolerance);
-        node->get_parameter(plugin_name_ + ".step_length", step_length);
-        node->get_parameter(plugin_name_ + ".distance_to_global_factor", distance_to_global_factor);
+        node->get_parameter(plugin_name_ + ".single_local_plan_length", step_length);
+        node->get_parameter(plugin_name_ + ".distance_global_score_factor", distance_to_global_factor);
 
         global_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 1);
     }
@@ -100,64 +100,69 @@ namespace local_planner
     geometry_msgs::msg::TwistStamped CustomPlanner::computeVelocityCommands(
         const geometry_msgs::msg::PoseStamped &pose,
         const geometry_msgs::msg::Twist &,
-        nav2_core::GoalChecker *goal_checker)
+        nav2_core::GoalChecker *)
     {
 
-        auto goal_pose = std::find_if(
-                             global_plan_.poses.begin(), global_plan_.poses.end(),
-                             [&](const auto &global_plan_pose)
-                             {
-                                 return hypot(
-                                            global_plan_pose.pose.position.x,
-                                            global_plan_pose.pose.position.y) >= lookahead_dist_;
-                             })
-                             ->pose;
+        auto transformed_plan = transformGlobalPlan(pose);
+
+
+        auto goal_pose_it = std::prev(transformed_plan.poses.end());
+
+        auto goal_pose = goal_pose_it->pose;
 
         double linear_vel, angular_vel;
+        linear_vel = 1.0;
+        angular_vel = 0.0;
 
+        // first check if pose is in front
+        if (goal_pose.position.x > 0)
+        {
+            // then check if it's on the left side or in front
+            if (goal_pose.position.y >= 0)
+            {
+                linear_vel = 1.0;
+                angular_vel = 0.3;
+                //std::cout << "GOAL DETECTED FRONT LEFT" << std::endl;
 
-        //check what paths to take
-        //EightCoordinationPart eighthCoordPart;
-
-        //first check if pose is behind
-        if (goal_pose.position.x < 0) {
-            //then check if it's on the left side or behind
-            if (goal_pose.position.y >= 0) {
-                
-
-
-            } //if not check if it's on right side or behind
-            else if (goal_pose.position.y <= 0) {
-
+            } // if not check if it's on right side
+            else
+            {
+                linear_vel = 1.0;
+                angular_vel = -0.3;
+                //std::cout << "GOAL DETECTED FRONT RIGHT" << std::endl;
             }
-            //if it's in front of the robot
-        } else {
-            //if it's on the left side or in front
-            if (goal_pose.position.y >= 0) {
+            // if it's behind the robot
+        }
+        else
+        {
+            // if it's on the left side or behind
+            if (goal_pose.position.y >= 0)
+            {
+                linear_vel = 0.3;
+                angular_vel = 1.0;
+                //std::cout << "GOAL DETECTED BACK LEFT" << std::endl;
 
-
-
-
-                //if it's on the right side
-            } else {
-
+                // if it's on the right side or behind
+            }
+            else if (goal_pose.position.y < 0)
+            {
+                linear_vel = 0.3;
+                angular_vel = -1.0;
+                //std::cout << "GOAL DETECTED BACK RIGHT" << std::endl;
             }
         }
 
-
-
         geometry_msgs::msg::TwistStamped cmd_vel;
         cmd_vel.header.frame_id = pose.header.frame_id;
-        cmd_vel.header.stamp = clock->now();
+        // cmd_vel.header.stamp = clock->now();
 
-        //cmd_vel.twist.linear.x = desired_linear_vel_;
+        cmd_vel.twist.linear.x = linear_vel;
+        cmd_vel.twist.angular.z = angular_vel;
         return cmd_vel;
     }
 
-    void checkTheEndingPoints
-
-
-    void CustomPlanner::setSpeedLimit(
+    void
+    CustomPlanner::setSpeedLimit(
         const double &speed_limit,
         const bool &percentage)
     {
@@ -262,7 +267,7 @@ namespace local_planner
 
             this->ranges[i] = msg.ranges[i];
 
-            std::cout << this->ranges[i] << std::endl;
+            // std::cout << this->ranges[i] << std::endl;
 
             // RCLCPP_INFO(this->get_logger(), "Lidar range message: '%f'", msg.ranges[i]);
         }
