@@ -70,10 +70,6 @@ namespace local_planner
             node, plugin_name_ + ".local_plan_rotation_rate", rclcpp::ParameterValue(0));
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".vel_reduction_factor", rclcpp::ParameterValue(0.4));
-        
-    
-
-
 
         node->get_parameter(plugin_name_ + ".desired_linear_vel", desired_linear_vel_);
         node->get_parameter(plugin_name_ + ".lookahead_dist", lookahead_dist_);
@@ -137,7 +133,7 @@ namespace local_planner
         if (goal_pose_it == transformed_plan.poses.end())
         {
             goal_pose_it = std::prev(transformed_plan.poses.end());
-            //if the end pose is closer that 1.0m reduce vel_factor so the velocity of the robot is smaller
+            // if the end pose is closer that 1.0m reduce vel_factor so the velocity of the robot is smaller
             vel_factor = vel_reduction_factor;
         }
 
@@ -147,51 +143,100 @@ namespace local_planner
         linear_vel = 1.0 * vel_factor;
         angular_vel = 0.0;
 
+        int partOfSpace = 0;
+        //double * projectedAngularVels = nullptr;
+        double angular_vels[9];
 
         // first check if pose is in front
-        if (goal_pose.position.x > 0){
-            if (goal_pose.position.y == 0) { //if straight ahead, case 0
-
-
-
-
-                
-            } else if (goal_pose.position.x >= goal_pose.position.y)// then check if it's case 1, northeast upper
-            {
-
-
-            } 
-            else if (goal_pose.position.y > goal_pose.position.x)// if not then case 2, northeast lower
-            {
-                
-
-                
-            } else if (-(goal_pose.position.y) > goal_pose.position.x) {//case 5, northwest lower
-
-
-
-
-            } else if (goal_pose.position.x >= -(goal_pose.position.y)) {//case 6, northwest upper
-
-
-
-            }
-        }
-        else //if goal is behind or x == 0 meaning straight to the side
+        if (goal_pose.position.x > 0)
         {
-            if (goal_pose.position.y >= 0)// if it's on the left side or behind
-            {
+            if (goal_pose.position.y == 0)
+            { // if straight ahead, case 0
 
-
-                
+                partOfSpace = 0;
             }
-            else if (goal_pose.position.y <= 0)// if it's on the right side or behind
+            else if (goal_pose.position.y >= goal_pose.position.x) // then check if it's case 1, northeast upper
+            {
+                partOfSpace = 1;
+            }
+            else if (goal_pose.position.x > goal_pose.position.y) // if not then case 2, northeast lower
             {
 
+                partOfSpace = 2;
+            }
+            else if (-(goal_pose.position.x) > goal_pose.position.y)
+            { // case 5, northwest lower
 
+                partOfSpace = 5;
+            }
+            else if (goal_pose.position.y >= -(goal_pose.position.x))
+            { // case 6, northwest upper
 
+                partOfSpace = 6;
             }
         }
+        else // if goal is behind or x == 0 meaning straight to the side
+        {
+            if (goal_pose.position.y <= 0) // if it's on the left side or behind
+            {
+                partOfSpace = 3;
+            }
+            else if (goal_pose.position.y >= 0) // if it's on the right side or behind
+            {
+
+                partOfSpace = 4;
+            }
+        }
+        std::cout<<partOfSpace<<std::endl;
+
+        double root_vel = 0.0;
+        switch (partOfSpace)
+        {
+        case 0:
+            root_vel = 0.0;
+            break;
+        case 1:
+            root_vel = 0.45;
+            break;
+        case 2:
+            root_vel = 1.35;
+            break;
+        case 3:
+            root_vel = 1.8;
+            break;
+        case 4:
+            root_vel = -1.8;
+            break;
+        case 5:
+            root_vel = -1.35;
+            break;
+        case 6:
+            root_vel = -0.45;
+            break;
+        }
+        std::cout<<root_vel<<std::endl;
+
+        angular_vels[0] = root_vel - (4 * local_plan_rotation_rate);
+        angular_vels[1] = root_vel - (3 * local_plan_rotation_rate);
+        angular_vels[2] = root_vel - (2 * local_plan_rotation_rate);
+        angular_vels[3] = root_vel - (1 * local_plan_rotation_rate);
+        angular_vels[4] = root_vel;
+        angular_vels[5] = root_vel + (1 * local_plan_rotation_rate);
+        angular_vels[6] = root_vel + (2 * local_plan_rotation_rate);
+        angular_vels[7] = root_vel + (3 * local_plan_rotation_rate);
+        angular_vels[8] = root_vel + (4 * local_plan_rotation_rate);
+
+        int bestChoice = 0;
+        //for (int i = 0; i < 9; i++) {
+            
+            //check the closeness to goal, to path, and check for obstacles
+
+
+        //}
+
+        bestChoice = 4;
+        angular_vel = angular_vels[bestChoice];
+
 
         geometry_msgs::msg::TwistStamped cmd_vel;
         cmd_vel.header.frame_id = pose.header.frame_id;
@@ -224,6 +269,51 @@ namespace local_planner
     {
         global_pub_->publish(path);
         global_plan_ = path;
+    }
+
+    void CustomPlanner::generateAngularVelSet(double *angular_vels, int casePart, double local_rotation_rate)
+    {
+        double root_vel = 0.0;
+
+        switch (casePart)
+        {
+        case 0:
+            root_vel = 0.0;
+            break;
+        case 1:
+            root_vel = 0.45;
+            break;
+        case 2:
+            root_vel = 1.35;
+            break;
+        case 3:
+            root_vel = 1.8;
+            break;
+        case 4:
+            root_vel = -1.8;
+            break;
+        case 5:
+            root_vel = -1.35;
+            break;
+        case 6:
+            root_vel = -0.45;
+            break;
+        }
+        std::cout<<root_vel<<std::endl;
+
+        angular_vels[0] = root_vel - (4 * local_rotation_rate);
+        angular_vels[1] = root_vel - (3 * local_rotation_rate);
+        angular_vels[2] = root_vel - (2 * local_rotation_rate);
+        angular_vels[3] = root_vel - (1 * local_rotation_rate);
+        angular_vels[4] = root_vel;
+        angular_vels[5] = root_vel + (1 * local_rotation_rate);
+        angular_vels[6] = root_vel + (2 * local_rotation_rate);
+        angular_vels[7] = root_vel + (3 * local_rotation_rate);
+        angular_vels[8] = root_vel + (4 * local_rotation_rate);
+
+        for (int i = 0; i < 9; i++) {
+            std::cout<<angular_vels[i]<<std::endl;
+        }
     }
 
     nav_msgs::msg::Path local_planner::CustomPlanner::transformGlobalPlan(const geometry_msgs::msg::PoseStamped &pose)

@@ -84,6 +84,7 @@ namespace local_planner
         double local_plan_rotation_rate_factor;
         int local_plan_rotation_rate;
 
+        void generateAngularVelSet(double *angular_vels, int casePart, double local_rotation_rate);
 
         typedef std::vector<std::tuple<double, double>> velocities;
 
