@@ -83,7 +83,13 @@ namespace local_planner
         double vel_reduction_factor;
         double local_plan_rotation_rate_factor;
         int local_plan_rotation_rate;
-        
+
+
+        double max_angular_vel = 1.8;
+        double wheel_base = 0.555;
+        double robot_width = 0.67;
+        double robot_length = 0.99;
+
         typedef std::vector<std::tuple<double, double>> velocities;
 
 

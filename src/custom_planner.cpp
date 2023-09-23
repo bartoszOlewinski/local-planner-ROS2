@@ -17,15 +17,8 @@
 using nav2_util::declare_parameter_if_not_declared;
 using nav2_util::geometry_utils::euclidean_distance;
 
-
-
-
-
-//uncomment to display couts in console, heavy on performance
-//#define DEBUG_DISPLAY
-
-
-
+// uncomment to display couts in console, heavy on performance
+// #define DEBUG_DISPLAY
 
 namespace local_planner
 {
@@ -162,9 +155,9 @@ namespace local_planner
         {
             if (goal_pose.position.y == 0)
             { // if straight ahead, case 0
-                #ifdef DEBUG_DISPLAY 
-                    std::cout << "GOAL IN FRONT" << std::endl;
-                #endif
+#ifdef DEBUG_DISPLAY
+                std::cout << "GOAL IN FRONT" << std::endl;
+#endif
 
                 partOfSpace = 0;
             }
@@ -172,36 +165,36 @@ namespace local_planner
             {
                 partOfSpace = 1;
 
-                #ifdef DEBUG_DISPLAY
-                    std::cout << "GOAL IN NORTHEAST UPPER: 1" << std::endl;
-                #endif
+#ifdef DEBUG_DISPLAY
+                std::cout << "GOAL IN NORTHEAST UPPER: 1" << std::endl;
+#endif
             }
             else if (goal_pose.position.x > goal_pose.position.y) // if not then case 2, northeast lower
             {
 
                 partOfSpace = 2;
 
-                #ifdef DEBUG_DISPLAY 
-                    std::cout << "GOAL IN NORTHEAST LOWER: 2" << std::endl;
-                #endif
+#ifdef DEBUG_DISPLAY
+                std::cout << "GOAL IN NORTHEAST LOWER: 2" << std::endl;
+#endif
             }
             else if (-(goal_pose.position.x) > goal_pose.position.y)
             { // case 5, northwest lower
 
                 partOfSpace = 5;
 
-                #ifdef DEBUG_DISPLAY
-                    std::cout << "GOAL IN NORTWEST LOWER: 5" << std::endl;
-                #endif
+#ifdef DEBUG_DISPLAY
+                std::cout << "GOAL IN NORTWEST LOWER: 5" << std::endl;
+#endif
             }
             else if (goal_pose.position.y >= -(goal_pose.position.x))
             { // case 6, northwest upper
 
                 partOfSpace = 6;
 
-                #ifdef DEBUG_DISPLAY
-                    std::cout << "GOAL IN NORTHEAST UPPER: 6" << std::endl;
-                #endif
+#ifdef DEBUG_DISPLAY
+                std::cout << "GOAL IN NORTHEAST UPPER: 6" << std::endl;
+#endif
             }
         }
         else // if goal is behind or x == 0 meaning straight to the side
@@ -210,64 +203,167 @@ namespace local_planner
             {
                 partOfSpace = 3;
 
-                #ifdef DEBUG_DISPLAY
-                    std::cout << "GOAL IN SOUTHWEST: 3" << std::endl;
-                #endif
+#ifdef DEBUG_DISPLAY
+                std::cout << "GOAL IN SOUTHWEST: 3" << std::endl;
+#endif
             }
             else if (goal_pose.position.y >= 0) // if it's on the right side or behind
             {
 
                 partOfSpace = 4;
 
-
-                #ifdef DEBUG_DISPLAY
-                    std::cout << "GOAL IN SOUTHEAST UPPER: 4" << std::endl;
-                #endif
+#ifdef DEBUG_DISPLAY
+                std::cout << "GOAL IN SOUTHEAST UPPER: 4" << std::endl;
+#endif
             }
-        
         }
-        #ifdef DEBUG_DISPLAY
-            std::cout << partOfSpace << std::endl;
-        #endif
-        
-        //taken from pure pursuit in navigation2
+#ifdef DEBUG_DISPLAY
+        std::cout << partOfSpace << std::endl;
+#endif
+
+        // taken from pure pursuit in navigation2
         double root_angular_vel = 0.0;
         auto curvature = 2.0 * goal_pose.position.y /
                          (goal_pose.position.x * goal_pose.position.x + goal_pose.position.y * goal_pose.position.y);
         linear_vel = desired_linear_vel_;
         root_angular_vel = desired_linear_vel_ * curvature;
 
-        #ifdef DEBUG_DISPLAY
-            std::cout << root_angular_vel << std::endl;
-        #endif
+        // 1.8 is the maximal angular velocity of A200 Husky when assuming no negative linear velocities of the wheels (one sided reverese movemenet)
+        if (root_angular_vel > max_angular_vel)
+            root_angular_vel = max_angular_vel;
+
+#ifdef DEBUG_DISPLAY
+        std::cout << root_angular_vel << std::endl;
+#endif
 
         //========================================
 
-        //if far ends then change path projections
-        if (partOfSpace == 3 || partOfSpace == 4) {
-            ;
+        // if far ends then change path projections
+        // bool isEdgeCase = false;
+        int root_path_index = 4; // 4 is default value
+        if (partOfSpace == 3)
+        {
+            angular_vels[0] = -max_angular_vel;
+            angular_vels[1] = -max_angular_vel + (1 * local_plan_rotation_rate);
+            angular_vels[2] = -max_angular_vel + (2 * local_plan_rotation_rate);
+            angular_vels[3] = -max_angular_vel + (3 * local_plan_rotation_rate);
+            angular_vels[4] = root_angular_vel + (4 * local_plan_rotation_rate);
+            angular_vels[5] = root_angular_vel + (3 * local_plan_rotation_rate);
+            angular_vels[6] = root_angular_vel + (2 * local_plan_rotation_rate);
+            angular_vels[7] = root_angular_vel + (1 * local_plan_rotation_rate);
+            angular_vels[8] = root_angular_vel;
+        }
+        else if (partOfSpace == 4)
+        {
+            angular_vels[8] = max_angular_vel;
+            angular_vels[7] = max_angular_vel - (1 * local_plan_rotation_rate);
+            angular_vels[6] = max_angular_vel - (2 * local_plan_rotation_rate);
+            angular_vels[5] = max_angular_vel - (3 * local_plan_rotation_rate);
+            angular_vels[4] = root_angular_vel - (4 * local_plan_rotation_rate);
+            angular_vels[3] = root_angular_vel - (3 * local_plan_rotation_rate);
+            angular_vels[2] = root_angular_vel - (2 * local_plan_rotation_rate);
+            angular_vels[1] = root_angular_vel - (1 * local_plan_rotation_rate);
+            angular_vels[0] = root_angular_vel;
+        }
+        else
+        {
+            angular_vels[0] = root_angular_vel - (4 * local_plan_rotation_rate);
+            angular_vels[1] = root_angular_vel - (3 * local_plan_rotation_rate);
+            angular_vels[2] = root_angular_vel - (2 * local_plan_rotation_rate);
+            angular_vels[3] = root_angular_vel - (1 * local_plan_rotation_rate);
+            angular_vels[4] = root_angular_vel;
+            angular_vels[5] = root_angular_vel + (1 * local_plan_rotation_rate);
+            angular_vels[6] = root_angular_vel + (2 * local_plan_rotation_rate);
+            angular_vels[7] = root_angular_vel + (3 * local_plan_rotation_rate);
+            angular_vels[8] = root_angular_vel + (4 * local_plan_rotation_rate);
         }
 
-        //only for tests, need to take account border cases
-        angular_vels[0] = root_angular_vel - (4 * local_plan_rotation_rate);
-        angular_vels[1] = root_angular_vel - (3 * local_plan_rotation_rate);
-        angular_vels[2] = root_angular_vel - (2 * local_plan_rotation_rate);
-        angular_vels[3] = root_angular_vel - (1 * local_plan_rotation_rate);
-        angular_vels[4] = root_angular_vel;
-        angular_vels[5] = root_angular_vel + (1 * local_plan_rotation_rate);
-        angular_vels[6] = root_angular_vel + (2 * local_plan_rotation_rate);
-        angular_vels[7] = root_angular_vel + (3 * local_plan_rotation_rate);
-        angular_vels[8] = root_angular_vel + (4 * local_plan_rotation_rate);
+        // consider default path the best at first
+        int best_choice = root_path_index;
 
-        int bestChoice = 0;
-        for (int i = 0; i < 9; i++) {
+        bool fail_array[9];
+        double path_distances[9];
 
-        // check the closeness to goal, to path, and check for obstacles
+        // for each of the paths, check for obstacles
+        for (int i = 0 i < 9; i++)
+        {
+            // calculate angle based on angular velocity that is currently considered
+            int path_angle = (int(angular_vels[i] * 180 / 3.14));
 
+            double angle_check_interval;
+            double vel_l = 1.0 - (angular_vels[i] * wheel_base / 2.0f);
+            double vel_r = (angular_vels[i] * wheel_base / 2.0f) + 1.0;
+            double radius = wheel_base / 2.0f * (vel_r + vel_l) / (vel_r - vel_l);
+            double dist_to_point = angular_vels[i] * 3.14f / 180.0f * radius;
+
+            path_distances[i] = dist_to_point;
+
+            if (path_angle >= 0)
+            {
+                angle_check_interval = (90 - path_angle) / 10.0;
+
+                for (int j = 0; j < 10; j++)
+                {   
+                    double current_ang_vel = angular_vels[i] + (j * angle_check_interval);
+
+                    double point_vel_l = 1.0 - (current_ang_vel * wheel_base / 2.0f);
+                    double point_vel_r = (current_ang_vel * wheel_base / 2.0f) + 1.0f;
+                    double point_radius = wheel_base / 2.0f * (point_vel_r + point_vel_l) / (point_vel_r - point_vel_l);
+                    double dist_to_check = current_ang_vel * 3.14f / 180.0f * point_radius;
+
+                    if (range[int (current_ang_vel)] <= dist_to_check + robot_length)
+                    {
+                        fail_array[i] = true;
+                        break;
+                    }
+                    else
+                    {
+                        fail_array[i] = false;
+                    }
+                }
+            }
+            else if (path_angle <= 0)
+            {
+                angle_check_interval = (path_angle - 90) / 10.0;
+
+                for (int j = 0; j < 10; j++)
+                {
+                    double current_ang_vel = angular_vels[i] + (j * angle_check_interval);
+
+                    double point_vel_l = 1.0 - (current_ang_vel * wheel_base / 2.0f);
+                    double point_vel_r = (current_ang_vel * wheel_base / 2.0f) + 1.0f;
+                    double point_radius = wheel_base / 2.0f * (point_vel_r + point_vel_l) / (point_vel_r - point_vel_l);
+                    double dist_to_check = current_ang_vel * 3.14f / 180.0f * point_radius;
+                    
+
+                    if (range[int (current_ang_vel)] <= dist_to_check + robot_length)
+                    {
+                        fail_array[i] = true;
+                        break;
+                    }
+                    else
+                    {
+                        fail_array[i] = false;
+                    }
+                }
+            } /* //should be able to handle straight ahead without special case
+             else
+             {       //should check for all
+                 if (range[180] <= 1.0 + robot_length)
+                 { // going forward
+                     fail_array[i] = std::tuple<1, 1.0>;
+                 } else {
+                     fail_array[i] = std::tuple<0, 1.0>;
+                 }
+             }
+             */
         }
 
-        bestChoice = 4;
-        angular_vel = angular_vels[bestChoice];
+
+
+
+        best_choice = 4;
+        angular_vel = angular_vels[best_choice];
 
         geometry_msgs::msg::TwistStamped cmd_vel;
         cmd_vel.header.frame_id = pose.header.frame_id;
@@ -302,7 +398,6 @@ namespace local_planner
         global_plan_ = path;
     }
 
-   
     nav_msgs::msg::Path local_planner::CustomPlanner::transformGlobalPlan(const geometry_msgs::msg::PoseStamped &pose)
     {
         if (global_plan_.poses.empty())
