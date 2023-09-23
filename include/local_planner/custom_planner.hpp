@@ -83,15 +83,9 @@ namespace local_planner
         double vel_reduction_factor;
         double local_plan_rotation_rate_factor;
         int local_plan_rotation_rate;
-
-        void generateAngularVelSet(double *angular_vels, int casePart, double local_rotation_rate);
-
+        
         typedef std::vector<std::tuple<double, double>> velocities;
 
-        //angular velocities for subsuquent path from left to righ, with 0 being the root path going straight
-        //arithmetic sequence
-        //double angular_velocities_preset[9] = {-1.0, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1};
-        double angular_velocities_preset[9] = {-1.8, -1.35, -0.9, -0.45, 0, 0.45, 0.9, 1.35, 1.8};
 
         const double EFFECTIVE_TRACK_WIDTH = 0.555;
 

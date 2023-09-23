@@ -150,7 +150,7 @@ namespace local_planner
         auto goal_pose = goal_pose_it->pose;
 
         double linear_vel, angular_vel;
-        linear_vel = 1.0 * vel_factor;
+        linear_vel = desired_linear_vel_;
         angular_vel = 0.0;
 
         int partOfSpace = 0;
@@ -231,14 +231,14 @@ namespace local_planner
         #endif
         
         //taken from pure pursuit in navigation2
-        double root_vel = 0.0;
+        double root_angular_vel = 0.0;
         auto curvature = 2.0 * goal_pose.position.y /
                          (goal_pose.position.x * goal_pose.position.x + goal_pose.position.y * goal_pose.position.y);
         linear_vel = desired_linear_vel_;
-        root_vel = desired_linear_vel_ * curvature;
+        root_angular_vel = desired_linear_vel_ * curvature;
 
         #ifdef DEBUG_DISPLAY
-            std::cout << root_vel << std::endl;
+            std::cout << root_angular_vel << std::endl;
         #endif
 
         //========================================
@@ -249,15 +249,15 @@ namespace local_planner
         }
 
         //only for tests, need to take account border cases
-        angular_vels[0] = root_vel - (4 * local_plan_rotation_rate);
-        angular_vels[1] = root_vel - (3 * local_plan_rotation_rate);
-        angular_vels[2] = root_vel - (2 * local_plan_rotation_rate);
-        angular_vels[3] = root_vel - (1 * local_plan_rotation_rate);
-        angular_vels[4] = root_vel;
-        angular_vels[5] = root_vel + (1 * local_plan_rotation_rate);
-        angular_vels[6] = root_vel + (2 * local_plan_rotation_rate);
-        angular_vels[7] = root_vel + (3 * local_plan_rotation_rate);
-        angular_vels[8] = root_vel + (4 * local_plan_rotation_rate);
+        angular_vels[0] = root_angular_vel - (4 * local_plan_rotation_rate);
+        angular_vels[1] = root_angular_vel - (3 * local_plan_rotation_rate);
+        angular_vels[2] = root_angular_vel - (2 * local_plan_rotation_rate);
+        angular_vels[3] = root_angular_vel - (1 * local_plan_rotation_rate);
+        angular_vels[4] = root_angular_vel;
+        angular_vels[5] = root_angular_vel + (1 * local_plan_rotation_rate);
+        angular_vels[6] = root_angular_vel + (2 * local_plan_rotation_rate);
+        angular_vels[7] = root_angular_vel + (3 * local_plan_rotation_rate);
+        angular_vels[8] = root_angular_vel + (4 * local_plan_rotation_rate);
 
         int bestChoice = 0;
         for (int i = 0; i < 9; i++) {
@@ -273,7 +273,7 @@ namespace local_planner
         cmd_vel.header.frame_id = pose.header.frame_id;
         // cmd_vel.header.stamp = clock->now();
 
-        cmd_vel.twist.linear.x = linear_vel;
+        cmd_vel.twist.linear.x = linear_vel * vel_factor;
         cmd_vel.twist.angular.z = angular_vel;
         return cmd_vel;
     }
@@ -302,52 +302,7 @@ namespace local_planner
         global_plan_ = path;
     }
 
-    void CustomPlanner::generateAngularVelSet(double *angular_vels, int casePart, double local_rotation_rate)
-    {
-        double root_vel = 0.0;
-
-        switch (casePart)
-        {
-        case 0:
-            root_vel = 0.0;
-            break;
-        case 1:
-            root_vel = 0.45;
-            break;
-        case 2:
-            root_vel = 1.35;
-            break;
-        case 3:
-            root_vel = 1.8;
-            break;
-        case 4:
-            root_vel = -1.8;
-            break;
-        case 5:
-            root_vel = -1.35;
-            break;
-        case 6:
-            root_vel = -0.45;
-            break;
-        }
-        std::cout << root_vel << std::endl;
-
-        angular_vels[0] = root_vel - (4 * local_rotation_rate);
-        angular_vels[1] = root_vel - (3 * local_rotation_rate);
-        angular_vels[2] = root_vel - (2 * local_rotation_rate);
-        angular_vels[3] = root_vel - (1 * local_rotation_rate);
-        angular_vels[4] = root_vel;
-        angular_vels[5] = root_vel + (1 * local_rotation_rate);
-        angular_vels[6] = root_vel + (2 * local_rotation_rate);
-        angular_vels[7] = root_vel + (3 * local_rotation_rate);
-        angular_vels[8] = root_vel + (4 * local_rotation_rate);
-
-        for (int i = 0; i < 9; i++)
-        {
-            std::cout << angular_vels[i] << std::endl;
-        }
-    }
-
+   
     nav_msgs::msg::Path local_planner::CustomPlanner::transformGlobalPlan(const geometry_msgs::msg::PoseStamped &pose)
     {
         if (global_plan_.poses.empty())
