@@ -133,11 +133,14 @@ namespace local_planner
 
         // If the last pose is still within lookahed distance, take the last pose
         double vel_factor = 1.0;
+        double path_extra_space = 0.99;
         if (goal_pose_it == transformed_plan.poses.end())
         {
             goal_pose_it = std::prev(transformed_plan.poses.end());
             // if the end pose is closer that 1.0m reduce vel_factor so the velocity of the robot is smaller
             vel_factor = vel_reduction_factor;
+
+            path_extra_space = 0.0;
         }
 
         auto goal_pose = goal_pose_it->pose;
@@ -231,6 +234,8 @@ namespace local_planner
         // 1.8 is the maximal angular velocity of A200 Husky when assuming no negative linear velocities of the wheels (one sided reverese movemenet)
         if (root_angular_vel > max_angular_vel)
             root_angular_vel = max_angular_vel;
+        else if (root_angular_vel < -max_angular_vel)
+            root_angular_vel = -max_angular_vel;
 
 #ifdef DEBUG_DISPLAY
         std::cout << root_angular_vel << std::endl;
@@ -289,7 +294,7 @@ namespace local_planner
         for (int i = 0; i < 9; i++)
         {
             // calculate angle based on angular velocity that is currently considered
-            int path_angle = (int(angular_vels[i] * 180 / 3.14));
+            int path_angle = (int(angular_vels[i] * 180.0f / 3.14f));
 
 
             double angle_check_interval;
@@ -306,12 +311,12 @@ namespace local_planner
             //if going left
             if (path_angle >= 0)
             {
-                angle_check_interval = (180 - path_angle) / 10.0;
+                angle_check_interval = (path_angle) / 10.0;
 
                 for (int j = 0; j < 10; j++)
                 {
                     double current_ang_vel = angular_vels[i] + (j * angle_check_interval);
-                    std::cout<<"left angular_vels: "<<angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
+                    std::cout<<"LEFT angular_vels: "<<angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
 
                     double point_vel_l = 1.0 - (current_ang_vel * wheel_base / 2.0f);
                     double point_vel_r = (current_ang_vel * wheel_base / 2.0f) + 1.0f;
@@ -320,7 +325,7 @@ namespace local_planner
 
                     //std::cout<<"Dist to check= " <<dist_to_check<<std::endl;
 
-                    if (ranges[2 * int(current_ang_vel)] <= dist_to_check + robot_length)
+                    if (ranges[2 * int(current_ang_vel)] <= dist_to_check + path_extra_space)
                     {
                         fail_array[i] = true;
                         //std::cout << "left: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE index: "<<int(current_ang_vel)<< std::endl;
@@ -335,19 +340,19 @@ namespace local_planner
             }//if going right
             else if (path_angle <= 0)
             {
-                angle_check_interval = (path_angle + 180) / 10.0;
+                angle_check_interval = -(path_angle) / 10.0; //-path_angle because angle_check_interval needs to be positive
 
                 for (int j = 0; j < 10; j++)
                 {
-                    double current_ang_vel = -angular_vels[i] + (j * -angle_check_interval);
-                    std::cout<<"right angular_vels: "<<-angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
+                    double current_ang_vel = -angular_vels[i] + (j * angle_check_interval);
+                    std::cout<<"RIGHT angular_vels: "<<-angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
 
                     double point_vel_l = 1.0 - (current_ang_vel * wheel_base / 2.0f);
                     double point_vel_r = (current_ang_vel * wheel_base / 2.0f) + 1.0f;
                     double point_radius = wheel_base / 2.0f * (point_vel_r + point_vel_l) / (point_vel_r - point_vel_l);
                     double dist_to_check = current_ang_vel * 3.14f / 180.0f * point_radius;
 
-                    if (ranges[2 * int(current_ang_vel)] <= dist_to_check + robot_length)
+                    if (ranges[2 * int(current_ang_vel)] <= dist_to_check + path_extra_space)
                     {
 
                         //std::cout << "right: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE: "<<int(current_ang_vel)<< std::endl;
@@ -422,10 +427,12 @@ namespace local_planner
         {
             angular_vel = angular_vels[best_choice];
 
-            std::cout<<"ANG VEL= " <<angular_vels[best_choice]<<", from index= "<<best_choice<<std::endl;
 
             cmd_vel.twist.linear.x = linear_vel * vel_factor;
             cmd_vel.twist.angular.z = angular_vel;
+        } else {
+            cmd_vel.twist.linear.x = -linear_vel * vel_factor;
+            cmd_vel.twist.angular.z = 0.0;
         }
 
         // cmd_vel.header.stamp = clock->now();

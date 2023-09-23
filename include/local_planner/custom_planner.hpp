@@ -85,6 +85,7 @@ namespace local_planner
         int local_plan_rotation_rate;
 
 
+
         double max_angular_vel = 1.8;
         double wheel_base = 0.555;
         double robot_width = 0.67;
