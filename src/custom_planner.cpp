@@ -17,6 +17,16 @@
 using nav2_util::declare_parameter_if_not_declared;
 using nav2_util::geometry_utils::euclidean_distance;
 
+
+
+
+
+//uncomment to display couts in console, heavy on performance
+#define DEBUG_DISPLAY
+
+
+
+
 namespace local_planner
 {
 
@@ -144,7 +154,7 @@ namespace local_planner
         angular_vel = 0.0;
 
         int partOfSpace = 0;
-        //double * projectedAngularVels = nullptr;
+        // double * projectedAngularVels = nullptr;
         double angular_vels[9];
 
         // first check if pose is in front
@@ -152,27 +162,46 @@ namespace local_planner
         {
             if (goal_pose.position.y == 0)
             { // if straight ahead, case 0
+                #ifdef DEBUG_DISPLAY 
+                    std::cout << "GOAL IN FRONT" << std::endl;
+                #endif
 
                 partOfSpace = 0;
             }
             else if (goal_pose.position.y >= goal_pose.position.x) // then check if it's case 1, northeast upper
             {
                 partOfSpace = 1;
+
+                #ifdef DEBUG_DISPLAY
+                    std::cout << "GOAL IN NORTHEAST UPPER: 1" << std::endl;
+                #endif
             }
             else if (goal_pose.position.x > goal_pose.position.y) // if not then case 2, northeast lower
             {
 
                 partOfSpace = 2;
+
+                #ifdef DEBUG_DISPLAY 
+                    std::cout << "GOAL IN NORTHEAST LOWER: 2" << std::endl;
+                #endif
             }
             else if (-(goal_pose.position.x) > goal_pose.position.y)
             { // case 5, northwest lower
 
                 partOfSpace = 5;
+
+                #ifdef DEBUG_DISPLAY
+                    std::cout << "GOAL IN NORTWEST LOWER: 5" << std::endl;
+                #endif
             }
             else if (goal_pose.position.y >= -(goal_pose.position.x))
             { // case 6, northwest upper
 
                 partOfSpace = 6;
+
+                #ifdef DEBUG_DISPLAY
+                    std::cout << "GOAL IN NORTHEAST UPPER: 6" << std::endl;
+                #endif
             }
         }
         else // if goal is behind or x == 0 meaning straight to the side
@@ -180,42 +209,46 @@ namespace local_planner
             if (goal_pose.position.y <= 0) // if it's on the left side or behind
             {
                 partOfSpace = 3;
+
+                #ifdef DEBUG_DISPLAY
+                    std::cout << "GOAL IN SOUTHWEST: 3" << std::endl;
+                #endif
             }
             else if (goal_pose.position.y >= 0) // if it's on the right side or behind
             {
 
                 partOfSpace = 4;
+
+
+                #ifdef DEBUG_DISPLAY
+                    std::cout << "GOAL IN SOUTHEAST UPPER: 4" << std::endl;
+                #endif
             }
+        
         }
-        std::cout<<partOfSpace<<std::endl;
-
+        #ifdef DEBUG_DISPLAY
+            std::cout << partOfSpace << std::endl;
+        #endif
+        
+        //taken from pure pursuit in navigation2
         double root_vel = 0.0;
-        switch (partOfSpace)
-        {
-        case 0:
-            root_vel = 0.0;
-            break;
-        case 1:
-            root_vel = 0.45;
-            break;
-        case 2:
-            root_vel = 1.35;
-            break;
-        case 3:
-            root_vel = 1.8;
-            break;
-        case 4:
-            root_vel = -1.8;
-            break;
-        case 5:
-            root_vel = -1.35;
-            break;
-        case 6:
-            root_vel = -0.45;
-            break;
-        }
-        std::cout<<root_vel<<std::endl;
+        auto curvature = 2.0 * goal_pose.position.y /
+                         (goal_pose.position.x * goal_pose.position.x + goal_pose.position.y * goal_pose.position.y);
+        linear_vel = desired_linear_vel_;
+        root_vel = desired_linear_vel_ * curvature;
 
+        #ifdef DEBUG_DISPLAY
+            std::cout << root_vel << std::endl;
+        #endif
+
+        //========================================
+
+        //if far ends then change path projections
+        if (partOfSpace == 3 || partOfSpace == 4) {
+            ;
+        }
+
+        //only for tests, need to take account border cases
         angular_vels[0] = root_vel - (4 * local_plan_rotation_rate);
         angular_vels[1] = root_vel - (3 * local_plan_rotation_rate);
         angular_vels[2] = root_vel - (2 * local_plan_rotation_rate);
@@ -227,16 +260,14 @@ namespace local_planner
         angular_vels[8] = root_vel + (4 * local_plan_rotation_rate);
 
         int bestChoice = 0;
-        //for (int i = 0; i < 9; i++) {
-            
-            //check the closeness to goal, to path, and check for obstacles
+        for (int i = 0; i < 9; i++) {
 
+        // check the closeness to goal, to path, and check for obstacles
 
-        //}
+        }
 
         bestChoice = 4;
         angular_vel = angular_vels[bestChoice];
-
 
         geometry_msgs::msg::TwistStamped cmd_vel;
         cmd_vel.header.frame_id = pose.header.frame_id;
@@ -299,7 +330,7 @@ namespace local_planner
             root_vel = -0.45;
             break;
         }
-        std::cout<<root_vel<<std::endl;
+        std::cout << root_vel << std::endl;
 
         angular_vels[0] = root_vel - (4 * local_rotation_rate);
         angular_vels[1] = root_vel - (3 * local_rotation_rate);
@@ -311,8 +342,9 @@ namespace local_planner
         angular_vels[7] = root_vel + (3 * local_rotation_rate);
         angular_vels[8] = root_vel + (4 * local_rotation_rate);
 
-        for (int i = 0; i < 9; i++) {
-            std::cout<<angular_vels[i]<<std::endl;
+        for (int i = 0; i < 9; i++)
+        {
+            std::cout << angular_vels[i] << std::endl;
         }
     }
 
