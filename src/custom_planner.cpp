@@ -22,7 +22,7 @@ using nav2_util::geometry_utils::euclidean_distance;
 
 
 //uncomment to display couts in console, heavy on performance
-#define DEBUG_DISPLAY
+//#define DEBUG_DISPLAY
 
 
 
