@@ -18,7 +18,7 @@ using nav2_util::declare_parameter_if_not_declared;
 using nav2_util::geometry_utils::euclidean_distance;
 
 // uncomment to display couts in console, heavy on performance
-// #define DEBUG_DISPLAY
+//#define DEBUG_DISPLAY
 
 namespace local_planner
 {
@@ -240,7 +240,7 @@ namespace local_planner
 
         // if far ends then change path projections
         // bool isEdgeCase = false;
-        int root_path_index = 4; // 4 is default value
+        // int root_path_index = 4; // 4 is default value
         if (partOfSpace == 3)
         {
             angular_vels[0] = -max_angular_vel;
@@ -252,6 +252,7 @@ namespace local_planner
             angular_vels[6] = root_angular_vel + (2 * local_plan_rotation_rate);
             angular_vels[7] = root_angular_vel + (1 * local_plan_rotation_rate);
             angular_vels[8] = root_angular_vel;
+            // root_path_index = 8;
         }
         else if (partOfSpace == 4)
         {
@@ -259,11 +260,11 @@ namespace local_planner
             angular_vels[7] = max_angular_vel - (1 * local_plan_rotation_rate);
             angular_vels[6] = max_angular_vel - (2 * local_plan_rotation_rate);
             angular_vels[5] = max_angular_vel - (3 * local_plan_rotation_rate);
-            angular_vels[4] = root_angular_vel - (4 * local_plan_rotation_rate);
             angular_vels[3] = root_angular_vel - (3 * local_plan_rotation_rate);
             angular_vels[2] = root_angular_vel - (2 * local_plan_rotation_rate);
             angular_vels[1] = root_angular_vel - (1 * local_plan_rotation_rate);
             angular_vels[0] = root_angular_vel;
+            // root_path_index = 0;
         }
         else
         {
@@ -278,71 +279,86 @@ namespace local_planner
             angular_vels[8] = root_angular_vel + (4 * local_plan_rotation_rate);
         }
 
-        // consider default path the best at first
-        int best_choice = root_path_index;
+        // -1 to see if none available paths are there
+        int best_choice = -1;
 
         bool fail_array[9];
-        double path_distances[9];
+        // double path_distances[9];
 
         // for each of the paths, check for obstacles
-        for (int i = 0 i < 9; i++)
+        for (int i = 0; i < 9; i++)
         {
             // calculate angle based on angular velocity that is currently considered
             int path_angle = (int(angular_vels[i] * 180 / 3.14));
 
+
             double angle_check_interval;
-            double vel_l = 1.0 - (angular_vels[i] * wheel_base / 2.0f);
-            double vel_r = (angular_vels[i] * wheel_base / 2.0f) + 1.0;
-            double radius = wheel_base / 2.0f * (vel_r + vel_l) / (vel_r - vel_l);
-            double dist_to_point = angular_vels[i] * 3.14f / 180.0f * radius;
+            // double vel_l = 1.0 - (angular_vels[i] * wheel_base / 2.0f);
+            // double vel_r = (angular_vels[i] * wheel_base / 2.0f) + 1.0;
+            // double radius = wheel_base / 2.0f * (vel_r + vel_l) / (vel_r - vel_l);
+            // double dist_to_point = angular_vels[i] * 3.14f / 180.0f * radius;
 
-            path_distances[i] = dist_to_point;
+            // path_distances[i] = dist_to_point;
 
+#ifdef DEBUG_DISPLAY
+            std::cout << "PATH DISTANCE CALCULATED WITH PATH ANGLE: " << path_angle << " , AND DISTANCE: "<< std::endl;
+#endif
+            //if going left
             if (path_angle >= 0)
             {
-                angle_check_interval = (90 - path_angle) / 10.0;
+                angle_check_interval = (180 - path_angle) / 10.0;
 
                 for (int j = 0; j < 10; j++)
-                {   
+                {
                     double current_ang_vel = angular_vels[i] + (j * angle_check_interval);
+                    std::cout<<"left angular_vels: "<<angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
 
                     double point_vel_l = 1.0 - (current_ang_vel * wheel_base / 2.0f);
                     double point_vel_r = (current_ang_vel * wheel_base / 2.0f) + 1.0f;
                     double point_radius = wheel_base / 2.0f * (point_vel_r + point_vel_l) / (point_vel_r - point_vel_l);
                     double dist_to_check = current_ang_vel * 3.14f / 180.0f * point_radius;
 
-                    if (range[int (current_ang_vel)] <= dist_to_check + robot_length)
+                    //std::cout<<"Dist to check= " <<dist_to_check<<std::endl;
+
+                    if (ranges[2 * int(current_ang_vel)] <= dist_to_check + robot_length)
                     {
                         fail_array[i] = true;
+                        //std::cout << "left: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE index: "<<int(current_ang_vel)<< std::endl;
                         break;
                     }
                     else
                     {
                         fail_array[i] = false;
+                        //std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
                     }
                 }
-            }
+            }//if going right
             else if (path_angle <= 0)
             {
-                angle_check_interval = (path_angle - 90) / 10.0;
+                angle_check_interval = (path_angle + 180) / 10.0;
 
                 for (int j = 0; j < 10; j++)
                 {
-                    double current_ang_vel = angular_vels[i] + (j * angle_check_interval);
+                    double current_ang_vel = -angular_vels[i] + (j * -angle_check_interval);
+                    std::cout<<"right angular_vels: "<<-angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
 
                     double point_vel_l = 1.0 - (current_ang_vel * wheel_base / 2.0f);
                     double point_vel_r = (current_ang_vel * wheel_base / 2.0f) + 1.0f;
                     double point_radius = wheel_base / 2.0f * (point_vel_r + point_vel_l) / (point_vel_r - point_vel_l);
                     double dist_to_check = current_ang_vel * 3.14f / 180.0f * point_radius;
-                    
 
-                    if (range[int (current_ang_vel)] <= dist_to_check + robot_length)
+                    if (ranges[2 * int(current_ang_vel)] <= dist_to_check + robot_length)
                     {
+
+                        //std::cout << "right: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE: "<<int(current_ang_vel)<< std::endl;
+
+
                         fail_array[i] = true;
                         break;
                     }
                     else
                     {
+                        //std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
                         fail_array[i] = false;
                     }
                 }
@@ -359,18 +375,61 @@ namespace local_planner
              */
         }
 
-
-
-
-        best_choice = 4;
-        angular_vel = angular_vels[best_choice];
+        if (partOfSpace == 3)
+        {
+            for (int i = 0; i < 9; i++)
+            {
+                if (!fail_array[i])
+                {
+                    best_choice = i;
+                }
+            }
+        }
+        else if (partOfSpace == 4)
+        {
+            for (int i = 8; i >= 0; i--)
+            {
+                if (!fail_array[i])
+                {
+                    best_choice = i;
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < 9; i++)
+            {
+                if (!fail_array[i])
+                {
+                    best_choice = i;
+                }
+            }
+            /*
+            for (int i = 8; i >= 4; i--)
+            {
+                if (!fail_array[i])
+                {
+                    best_choice = i;
+                }
+            }
+            */
+        }
 
         geometry_msgs::msg::TwistStamped cmd_vel;
         cmd_vel.header.frame_id = pose.header.frame_id;
+
+        if (best_choice != -1)
+        {
+            angular_vel = angular_vels[best_choice];
+
+            std::cout<<"ANG VEL= " <<angular_vels[best_choice]<<", from index= "<<best_choice<<std::endl;
+
+            cmd_vel.twist.linear.x = linear_vel * vel_factor;
+            cmd_vel.twist.angular.z = angular_vel;
+        }
+
         // cmd_vel.header.stamp = clock->now();
 
-        cmd_vel.twist.linear.x = linear_vel * vel_factor;
-        cmd_vel.twist.angular.z = angular_vel;
         return cmd_vel;
     }
 
