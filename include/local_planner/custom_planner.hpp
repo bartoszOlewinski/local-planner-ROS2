@@ -93,9 +93,6 @@ namespace local_planner
 
         typedef std::vector<std::tuple<double, double>> velocities;
 
-
-        const double EFFECTIVE_TRACK_WIDTH = 0.555;
-
         nav_msgs::msg::Path global_plan_;
         std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> global_pub_;
 
