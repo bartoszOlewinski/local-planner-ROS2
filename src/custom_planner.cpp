@@ -133,14 +133,14 @@ namespace local_planner
 
         // If the last pose is still within lookahed distance, take the last pose
         double vel_factor = 1.0;
-        double path_extra_space = 0.95;
+        double path_extra_space = 0.4;
         if (goal_pose_it == transformed_plan.poses.end())
         {
             goal_pose_it = std::prev(transformed_plan.poses.end());
             // if the end pose is closer that 1.0m reduce vel_factor so the velocity of the robot is smaller
             vel_factor = vel_reduction_factor;
 
-            //path_extra_space = 0.05;
+            path_extra_space = 0.10;
         }
 
         auto goal_pose = goal_pose_it->pose;
@@ -153,71 +153,24 @@ namespace local_planner
         // double * projectedAngularVels = nullptr;
         double angular_vels[9];
 
-        // first check if pose is in front
-        if (goal_pose.position.x > 0)
-        {
-            if (goal_pose.position.y == 0)
-            { // if straight ahead, case 0
-#ifdef DEBUG_DISPLAY
-                std::cout << "GOAL IN FRONT" << std::endl;
-#endif
-
-                partOfSpace = 0;
-            }
-            else if (goal_pose.position.y >= goal_pose.position.x) // then check if it's case 1, northeast upper
-            {
-                partOfSpace = 1;
-
-#ifdef DEBUG_DISPLAY
-                std::cout << "GOAL IN NORTHEAST UPPER: 1" << std::endl;
-#endif
-            }
-            else if (goal_pose.position.x > goal_pose.position.y) // if not then case 2, northeast lower
-            {
-
-                partOfSpace = 2;
-
-#ifdef DEBUG_DISPLAY
-                std::cout << "GOAL IN NORTHEAST LOWER: 2" << std::endl;
-#endif
-            }
-            else if (-(goal_pose.position.x) > goal_pose.position.y)
-            { // case 5, northwest lower
-
-                partOfSpace = 5;
-
-#ifdef DEBUG_DISPLAY
-                std::cout << "GOAL IN NORTWEST LOWER: 5" << std::endl;
-#endif
-            }
-            else if (goal_pose.position.y >= -(goal_pose.position.x))
-            { // case 6, northwest upper
-
-                partOfSpace = 6;
-
-#ifdef DEBUG_DISPLAY
-                std::cout << "GOAL IN NORTHEAST UPPER: 6" << std::endl;
-#endif
-            }
-        }
-        else // if goal is behind or x == 0 meaning straight to the side
+        if (goal_pose.position.x <= 0)
+        // if goal is behind or x == 0 meaning straight to the side
         {
             if (goal_pose.position.y <= 0) // if it's on the left side or behind
             {
-                partOfSpace = 3;
+                partOfSpace = 4;
 
-#ifdef DEBUG_DISPLAY
-                std::cout << "GOAL IN SOUTHWEST: 3" << std::endl;
-#endif
+
+                //std::cout << "GOAL IN SOUTHWEST: 4" << std::endl;
+
             }
             else if (goal_pose.position.y >= 0) // if it's on the right side or behind
             {
 
-                partOfSpace = 4;
+                partOfSpace = 3;
 
-#ifdef DEBUG_DISPLAY
-                std::cout << "GOAL IN SOUTHEAST UPPER: 4" << std::endl;
-#endif
+                //std::cout << "GOAL IN SOUTHEAST: 3" << std::endl;
+
             }
         }
 #ifdef DEBUG_DISPLAY
@@ -246,12 +199,12 @@ namespace local_planner
         // if far ends then change path projections
         // bool isEdgeCase = false;
         // int root_path_index = 4; // 4 is default value
-        if (partOfSpace == 3)
+        if (partOfSpace == 4)
         {
-            angular_vels[0] = -max_angular_vel;
-            angular_vels[1] = -max_angular_vel + (1 * local_plan_rotation_rate);
-            angular_vels[2] = -max_angular_vel + (2 * local_plan_rotation_rate);
-            angular_vels[3] = -max_angular_vel + (3 * local_plan_rotation_rate);
+            angular_vels[0] = root_angular_vel + (8 * local_plan_rotation_rate);
+            angular_vels[1] = root_angular_vel + (7 * local_plan_rotation_rate);
+            angular_vels[2] = root_angular_vel + (6 * local_plan_rotation_rate);
+            angular_vels[3] = root_angular_vel + (5 * local_plan_rotation_rate);
             angular_vels[4] = root_angular_vel + (4 * local_plan_rotation_rate);
             angular_vels[5] = root_angular_vel + (3 * local_plan_rotation_rate);
             angular_vels[6] = root_angular_vel + (2 * local_plan_rotation_rate);
@@ -259,12 +212,12 @@ namespace local_planner
             angular_vels[8] = root_angular_vel;
             // root_path_index = 8;
         }
-        else if (partOfSpace == 4)
+        else if (partOfSpace == 3)
         {
-            angular_vels[8] = max_angular_vel;
-            angular_vels[7] = max_angular_vel - (1 * local_plan_rotation_rate);
-            angular_vels[6] = max_angular_vel - (2 * local_plan_rotation_rate);
-            angular_vels[5] = max_angular_vel - (3 * local_plan_rotation_rate);
+            angular_vels[8] = root_angular_vel - (7 * local_plan_rotation_rate);
+            angular_vels[7] = root_angular_vel  -(6 * local_plan_rotation_rate);
+            angular_vels[6] = root_angular_vel - (5 * local_plan_rotation_rate);
+            angular_vels[5] = root_angular_vel - (4 * local_plan_rotation_rate);
             angular_vels[3] = root_angular_vel - (3 * local_plan_rotation_rate);
             angular_vels[2] = root_angular_vel - (2 * local_plan_rotation_rate);
             angular_vels[1] = root_angular_vel - (1 * local_plan_rotation_rate);
@@ -299,12 +252,6 @@ namespace local_planner
 
 
             double angle_check_interval;
-            // double vel_l = 1.0 - (angular_vels[i] * wheel_base / 2.0f);
-            // double vel_r = (angular_vels[i] * wheel_base / 2.0f) + 1.0;
-            // double radius = wheel_base / 2.0f * (vel_r + vel_l) / (vel_r - vel_l);
-            // double dist_to_point = angular_vels[i] * 3.14f / 180.0f * radius;
-
-            // path_distances[i] = dist_to_point;
 
 #ifdef DEBUG_DISPLAY
             std::cout << "PATH DISTANCE CALCULATED WITH PATH ANGLE: " << path_angle << " , AND DISTANCE: "<< std::endl;
@@ -312,27 +259,30 @@ namespace local_planner
             //if going left
             if (path_angle >= 0)
             {
-                angle_check_interval = (180 - (path_angle/2)) / 10.0;
+                //angle_check_interval = (180 - (path_angle/2)) / 10.0;
+                angle_check_interval = (5 * path_angle / 4) / 10.0;
 
                 for (int j = 0; j < 10; j++)
                 {
-                    double current_ang_vel = path_angle / 2 + (j * angle_check_interval);
-                    std::cout<<"LEFT angular_vels: "<<angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
+                    double current_ang_vel = 90 + (path_angle / 4) - (j * angle_check_interval);
+                    //std::cout<<"LEFT angular_vels: "<<angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
 
+                    /*
                     double point_vel_l = 1.0 - (current_ang_vel * wheel_base / 2.0f);
                     double point_vel_r = (current_ang_vel * wheel_base / 2.0f) + 1.0f;
                     double point_radius = wheel_base / 2.0f * (point_vel_r + point_vel_l) / (point_vel_r - point_vel_l);
                     double dist_to_check = current_ang_vel * 3.14f / 180.0f * point_radius;
-
+                    */
                     //std::cout<<"Dist to check= " <<dist_to_check<<std::endl;
 
-                    if (ranges[2 * (int(current_ang_vel))] <= dist_to_check + path_extra_space)
+                    if (ranges[2 * (int(current_ang_vel))] <= lookahead_dist_ + path_extra_space)
                     {
                         fail_array[i] = true;
                         //std::cout << "left: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE index: "<<int(current_ang_vel)<< std::endl;
+                        j = 10;
                         break;
                     }
-                    else
+                    else 
                     {
                         fail_array[i] = false;
                         //std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
@@ -341,19 +291,22 @@ namespace local_planner
             }//if going right
             else if (path_angle <= 0)
             {
-                angle_check_interval = (180 - (-path_angle/2)) / 10.0; //-path_angle because angle_check_interval needs to be positive
+                //angle_check_interval = (180 - (-path_angle/2)) / 10.0; //-path_angle because angle_check_interval needs to be positive
+                angle_check_interval = (5 * (-path_angle) / 4) / 10.0;
 
                 for (int j = 0; j < 10; j++)
                 {
-                    double current_ang_vel = -path_angle + (j * angle_check_interval);
-                    std::cout<<"RIGHT angular_vels: "<<-angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
+                    double current_ang_vel = 90 - ((-path_angle) / 4) + (j * angle_check_interval);
+                    //std::cout<<"RIGHT angular_vels: "<<-angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
 
+                    /*
                     double point_vel_l = 1.0 - (current_ang_vel * wheel_base / 2.0f);
                     double point_vel_r = (current_ang_vel * wheel_base / 2.0f) + 1.0f;
                     double point_radius = wheel_base / 2.0f * (point_vel_r + point_vel_l) / (point_vel_r - point_vel_l);
                     double dist_to_check = current_ang_vel * 3.14f / 180.0f * point_radius;
+                    */
 
-                    if (ranges[2 * (int(current_ang_vel))] <= dist_to_check + path_extra_space)
+                    if (ranges[2 * (int(current_ang_vel))] <= lookahead_dist_ + path_extra_space)
                     {
 
                         //std::cout << "right: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE: "<<int(current_ang_vel)<< std::endl;
@@ -381,7 +334,7 @@ namespace local_planner
              */
         }
 
-        if (partOfSpace == 3)
+        if (partOfSpace == 4)
         {
             for (int i = 0; i < 9; i++)
             {
@@ -391,7 +344,7 @@ namespace local_planner
                 }
             }
         }
-        else if (partOfSpace == 4)
+        else if (partOfSpace == 3)
         {
             for (int i = 8; i >= 0; i--)
             {
