@@ -333,8 +333,8 @@ namespace local_planner
 
                 for (int j = 0; j < 10; j++)
                 {
-                    double current_ang_vel = 170 - (j * angle_check_interval);
-                    std::cout<<"LEFT: Iteration j: "<<j<<", angle interval: "<<angle_check_interval<<", current angle: "<<current_ang_vel<<", expected value of j*interval: "<<j*angle_check_interval<<std::endl;
+                    double current_ang_vel = 90 - (j * angle_check_interval);
+                    //std::cout<<"LEFT: Iteration j: "<<j<<", angle interval: "<<angle_check_interval<<", current angle: "<<current_ang_vel<<", expected value of j*interval: "<<j*angle_check_interval<<std::endl;
 
                     //if the furthest part of the visiblity box reached, slope the other way around
                     if (current_ang_vel > longest_dist_angle && slope_m < 0)
@@ -348,7 +348,7 @@ namespace local_planner
                     //std::cout<<"Left: Safenet dist: "<<safenet_dist<<", slope_m: "<<slope_m<<", max_distance: "<<max_distance<<std::endl;
 
 
-                    if (ranges[int(current_ang_vel)] <= max_distance)
+                    if (ranges[2 * int(current_ang_vel)] <= max_distance)
                     {
                         fail_array[i] = true;
                         //std::cout << "left: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE index: "<<int(current_ang_vel)<<", for Max Distance: "<<max_distance<<std::endl;
@@ -357,7 +357,7 @@ namespace local_planner
                     else
                     {
                         fail_array[i] = false;
-                        // std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
+                        //std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
                     }
                 }
             } // if going right
@@ -370,8 +370,8 @@ namespace local_planner
 
                 for (int j = 0; j < 10; j++)
                 {
-                    double current_ang_vel = 190 + (j * angle_check_interval);
-                    std::cout<<"RIGHT: Iteration j: "<<j<<", angle interval: "<<angle_check_interval<<", current angle: "<<current_ang_vel<<", expected value of j*interval: "<<j*angle_check_interval<<std::endl;
+                    double current_ang_vel = 90 + (j * angle_check_interval);
+                    //std::cout<<"RIGHT: Iteration j: "<<j<<", angle interval: "<<angle_check_interval<<", current angle: "<<current_ang_vel<<", expected value of j*interval: "<<j*angle_check_interval<<std::endl;
 
                     if (current_ang_vel > longest_dist_angle && slope_m > 0)
                     {
@@ -383,7 +383,7 @@ namespace local_planner
                     double max_distance = safenet_dist + (y * slope_m);
                     //std::cout<<"Right: Safenet dist: "<<safenet_dist<<", slope_m: "<<slope_m<<", max_distance: "<<max_distance<<std::endl;
 
-                    if (ranges[int(current_ang_vel)] <= max_distance)
+                    if (ranges[2 * int(current_ang_vel)] <= max_distance)
                     {
 
                         //std::cout << "right: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE index: "<<int(current_ang_vel)<<", for Max Distance: "<<max_distance<<std::endl;
@@ -393,25 +393,54 @@ namespace local_planner
                     }
                     else
                     {
-                        // std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
+                        //std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
                         fail_array[i] = false;
                     }
                 }
             }
             else // handle straight line scenario
             {
-                for (int j = 0; j < 20; j += 2)
+                double basic_length = 0.5;
+                
+                for (int j = 0; j < 5; j += 2)
                 {
+                    
+                    int angle = 80 + j;
 
-                    double space_in_front = (robot_width / 2.0) / cos(75 + j);
+                    double space_in_front = basic_length / cos(angle * 3.14 / 180);
                     // std::cout<<"Space in front for straightline: "<<space_in_front<<std::endl;
-                    if (space_in_front > 0.3)
+                    if (space_in_front > basic_length)
                     {
-                        space_in_front = 0.3;
+                        space_in_front = basic_length;
                     }
                     // std::cout<<"Range for current reading: "<<ranges[2 * (75 + j)]<<std::endl;
 
-                    if (ranges[2 * (75 + j)] < space_in_front)
+                    if (ranges[2 * (angle)] < space_in_front)
+                    {
+                        // std::cout<<"Straight path obstacle detected"<<std::endl;
+                        fail_array[i] = true;
+                        break;
+                    }
+                    else
+                    {
+                        fail_array[i] = false;
+                    }
+                }
+                for (int j = 0; j < 5; j += 2)
+                {
+                    
+                    int angle = 90 - j;
+                    
+
+                    double space_in_front = basic_length / cos(angle * 3.14 / 180);
+                    // std::cout<<"Space in front for straightline: "<<space_in_front<<std::endl;
+                    if (space_in_front > basic_length)
+                    {
+                        space_in_front = basic_length;
+                    }
+                    // std::cout<<"Range for current reading: "<<ranges[2 * (75 + j)]<<std::endl;
+
+                    if (ranges[2 * (180 - angle)] < space_in_front)
                     {
                         // std::cout<<"Straight path obstacle detected"<<std::endl;
                         fail_array[i] = true;
