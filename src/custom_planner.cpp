@@ -345,7 +345,7 @@ namespace local_planner
                     double y = (safenet_dist * tan(int(current_ang_vel * 3.14 / 180)) / (1 - (tan(int(current_ang_vel) * 3.14 / 180) / tan(path_angle * 3.14 / 180))));
 
                     double max_distance = safenet_dist + (-y * slope_m);
-                    std::cout<<i<<") Left: Safenet dist: "<<safenet_dist<<", slope_m: "<<slope_m<<", max_distance: "<<max_distance<<", angle: "<<current_ang_vel<<", range: "<<ranges[2 * int(current_ang_vel)]<<std::endl;
+                    std::cout<<i<<") Left: Safenet dist: "<<safenet_dist<<", angular_vel: "<<angular_vels[i]<<", max_distance: "<<max_distance<<", angle: "<<current_ang_vel<<", range: "<<ranges[2 * int(current_ang_vel)]<<std::endl;
 
 
                     if (ranges[2 * int(current_ang_vel)] <= max_distance)
@@ -382,7 +382,7 @@ namespace local_planner
 
                     double max_distance = safenet_dist + (y * slope_m);
 
-                    std::cout<<i<<") Right: Safenet dist: "<<safenet_dist<<", slope_m: "<<slope_m<<", max_distance: "<<max_distance<<", angle: "<<current_ang_vel<<", range: "<<ranges[2 * int(current_ang_vel)]<<std::endl;
+                    std::cout<<i<<") Right: Safenet dist: "<<safenet_dist<<", angular_vel: "<<angular_vels[i]<<", max_distance: "<<max_distance<<", angle: "<<current_ang_vel<<", range: "<<ranges[2 * int(current_ang_vel)]<<std::endl;
 
                     if (ranges[2 * int(current_ang_vel)] <= max_distance)
                     {
