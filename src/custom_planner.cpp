@@ -218,6 +218,7 @@ namespace local_planner
         }
         else
         {
+
             angular_vels[0] = root_angular_vel - (4 * local_plan_rotation_rate);
             angular_vels[1] = root_angular_vel - (3 * local_plan_rotation_rate);
             angular_vels[2] = root_angular_vel - (2 * local_plan_rotation_rate);
@@ -227,6 +228,22 @@ namespace local_planner
             angular_vels[6] = root_angular_vel + (2 * local_plan_rotation_rate);
             angular_vels[7] = root_angular_vel + (3 * local_plan_rotation_rate);
             angular_vels[8] = root_angular_vel + (4 * local_plan_rotation_rate);
+
+            //check if any velocities are out of bounds, if they are, change them into further instances
+            //on the other sides of the root path
+            for (int i = 0; i < 4; i--) {
+                if (angular_vels[i] < -max_angular_vel) {
+                    root_path_index = i;
+                    angular_vels[i] = root_angular_vel + ((i + 1) * local_plan_rotation_rate);
+                }
+
+            }
+            for (int i = 5; i < 9; i++) {
+                if (angular_vels[i] < -max_angular_vel) {
+                    root_path_index = i;
+                    angular_vels[i] = root_angular_vel - ((i + 1 * local_plan_rotation_rate));
+                }
+            }
         }
 
         // -1 to see if none available paths are there
