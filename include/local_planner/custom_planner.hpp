@@ -81,7 +81,6 @@ namespace local_planner
         int local_plan_laserscan_number;
         int local_plan_projection_number;
         double vel_reduction_factor;
-        double local_plan_rotation_rate_factor;
         double local_plan_rotation_rate;
 
 
@@ -103,6 +102,7 @@ namespace local_planner
         void incomingRanges(const sensor_msgs::msg::LaserScan &msg);
 
         rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_sub_;
+        rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr current_chosen_path_pub;
     };
 
 }

@@ -19,7 +19,7 @@ using nav2_util::declare_parameter_if_not_declared;
 using nav2_util::geometry_utils::euclidean_distance;
 
 // uncomment to display couts in console, heavy on performance
-//#define DEBUG_DISPLAY
+// #define DEBUG_DISPLAY
 
 namespace local_planner
 {
@@ -42,6 +42,9 @@ namespace local_planner
             "/a200_0000/sensors/lidar2d_0/scan",
             RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
             std::bind(&CustomPlanner::incomingRanges, this, std::placeholders::_1));
+
+        current_chosen_path_pub = node->create_publisher<geometry_msgs::msg::TwistStamped>(
+            "local_plan", 10);
 
         costmap_ros_ = costmap_ros;
         tf_ = tf;
@@ -69,9 +72,7 @@ namespace local_planner
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".local_plan_projection_number", rclcpp::ParameterValue(9));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".local_plan_rotation_rate_factor", rclcpp::ParameterValue(0.02));
-        declare_parameter_if_not_declared(
-            node, plugin_name_ + ".local_plan_rotation_rate", rclcpp::ParameterValue(0.0));
+            node, plugin_name_ + ".local_plan_rotation_rate", rclcpp::ParameterValue(0.06));
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".vel_reduction_factor", rclcpp::ParameterValue(0.4));
 
@@ -88,7 +89,6 @@ namespace local_planner
         node->get_parameter(plugin_name_ + ".distance_goal_score_factor", distance_goal_score_factor);
         node->get_parameter(plugin_name_ + ".local_plan_laserscan_number", local_plan_laserscan_number);
         node->get_parameter(plugin_name_ + ".local_plan_projection_number", local_plan_projection_number);
-        node->get_parameter(plugin_name_ + ".local_plan_rotation_rate_factor", local_plan_rotation_rate_factor);
         node->get_parameter(plugin_name_ + ".local_plan_rotation_rate", local_plan_rotation_rate);
         node->get_parameter(plugin_name_ + ".vel_reduction_factor", vel_reduction_factor);
 
@@ -134,14 +134,14 @@ namespace local_planner
 
         // If the last pose is still within lookahed distance, take the last pose
         double vel_factor = 1.0;
-        double path_extra_space = 0.4; //SHOULD BE PARAMETRIZED
+        //double path_extra_space = 0.5; // SHOULD BE PARAMETRIZED
         if (goal_pose_it == transformed_plan.poses.end())
         {
             goal_pose_it = std::prev(transformed_plan.poses.end());
             // if the end pose is closer that 1.0m reduce vel_factor so the velocity of the robot is smaller
             vel_factor = 0.2;
 
-            path_extra_space = 0.10;
+            //path_extra_space = 0.1;
         }
 
         auto goal_pose = goal_pose_it->pose;
@@ -191,7 +191,7 @@ namespace local_planner
 
         // if far ends then change path projections
         int root_path_index = 4;
-        if (partOfSpace == 4) //left back side
+        if (partOfSpace == 3) // right back side
         {
             angular_vels[0] = root_angular_vel + (8 * local_plan_rotation_rate);
             angular_vels[1] = root_angular_vel + (7 * local_plan_rotation_rate);
@@ -204,7 +204,7 @@ namespace local_planner
             angular_vels[8] = root_angular_vel;
             root_path_index = 8;
         }
-        else if (partOfSpace == 3) //right back side
+        else if (partOfSpace == 4) // left back side
         {
             angular_vels[8] = root_angular_vel - (7 * local_plan_rotation_rate);
             angular_vels[7] = root_angular_vel - (6 * local_plan_rotation_rate);
@@ -229,19 +229,20 @@ namespace local_planner
             angular_vels[7] = root_angular_vel + (3 * local_plan_rotation_rate);
             angular_vels[8] = root_angular_vel + (4 * local_plan_rotation_rate);
 
-            //check if any velocities are out of bounds, if they are, change them into further instances
-            //on the other sides of the root path
-            for (int i = 0; i < 4; i--) {
-                if (angular_vels[i] < -max_angular_vel) {
-                    root_path_index = i;
-                    angular_vels[i] = root_angular_vel + ((i + 1) * local_plan_rotation_rate);
+            // check if any velocities are out of bounds, if they are, change them into further instances
+            // on the other sides of the root path
+            for (int i = 0; i < 4; i++)
+            {
+                if (angular_vels[i] < -max_angular_vel)
+                {
+                    angular_vels[i] = -max_angular_vel;
                 }
-
             }
-            for (int i = 5; i < 9; i++) {
-                if (angular_vels[i] < -max_angular_vel) {
-                    root_path_index = i;
-                    angular_vels[i] = root_angular_vel - ((i + 1 * local_plan_rotation_rate));
+            for (int i = 5; i < 9; i++)
+            {
+                if (angular_vels[i] > max_angular_vel)
+                {
+                    angular_vels[i] = max_angular_vel;
                 }
             }
         }
@@ -250,130 +251,181 @@ namespace local_planner
         int best_choice = -1;
 
         bool fail_array[9];
-        
 
         // for each of the paths, check for obstacles
         for (int i = 0; i < 9; i++)
         {
-            std::cout<<"ANG velocities #"<<i<<"= "<<angular_vels[i]<<std::endl;
-            // calculate angle based on angular velocity that is currently considered
-            //int max_path_angle = (int(angular_vels[i] * 180.0f / 3.14f));
-            //int path_angle = max_path_angle / 2;
-        
+            // std::cout<<"ANG velocities #"<<i<<"= "<<angular_vels[i]<<", PartOfSpace: "<<partOfSpace<<std::endl;
+            //  calculate angle based on angular velocity that is currently considered
+            // int max_path_angle = (int(angular_vels[i] * 180.0f / 3.14f));
+            // int path_angle = max_path_angle / 2;
+
             int path_angle = 90;
+            // bool is_root_edge_case = ((angular_vels[root_path_index] == max_angular_vel) || (angular_vels[root_path_index] == -max_angular_vel));
 
-            
+            double current_a = 0.0;
+            double chord_arc_dist = 0.0;
+            double safenet_dist = 0.0;
+
             double radius = linear_vel / angular_vels[i];
-            if (i == root_path_index) {
-                //calculate the angle based off of available pose data for
-                //the root angular velocity
-            
-                double path_angle_dbl = (((asin (goal_pose.position.x / radius)) * 180) / 3.14f);
-                path_angle = int (path_angle_dbl);
-                std::cout<<"Roth path angular vel: "<<angular_vels[i]<<", Linear vel: "<<linear_vel * vel_factor<<std::endl;
-                std::cout<<"Root path angle double: "<<path_angle_dbl<<", after conversion to int: "<<path_angle<<std::endl;
-            } else {
-                int current_angle = 1;
-                double current_a = 0.0;
+            if (i == (root_path_index + 100))
+            {
+                // calculate the angle based off of available pose data for
+                // the root angular velocity
 
-                if (radius < 0){
+                double path_angle_dbl = (((asin(sqrt(goal_pose.position.x * goal_pose.position.x + goal_pose.position.y * goal_pose.position.y) / (2 * radius))) * 180) / 3.14f);
+                path_angle = int(path_angle_dbl);
+
+                if (path_angle < 0)
+                {
+                    path_angle *= -1;
+                }
+                // std::cout<<"Roth path angular vel: "<<angular_vels[i]<<", Linear vel: "<<linear_vel<<", y = "<<goal_pose.position.y<<", x = "<<goal_pose.position.x<<std::endl;
+                // std::cout<<"Root path angle: "<<path_angle_dbl<<", after conversion to int: "<<path_angle<<std::endl;
+            }
+            else
+            {
+                int current_angle = 1;
+
+                if (radius < 0)
+                {
                     radius *= -1;
                 }
 
-                do {
+                do
+                {
                     current_a = 2 * radius * sin(current_angle * 3.14f / 180.0f);
 
-                    //std::cout<<"Current_angle = "<<current_angle<<", Current_a = "<<current_a<<", Lookahead distance: "<<lookahead_dist_<<std::endl;
+                    // std::cout<<"Current_angle = "<<current_angle<<", Current_a = "<<current_a<<", Lookahead distance: "<<lookahead_dist_<<std::endl;
 
                     current_angle++;
 
-                } while (current_a < lookahead_dist_);
+                } while (current_a < lookahead_dist_ && current_angle < 89);
 
-                    if (angular_vels[i] < 0) {
-                        current_angle *= -1;
-                    }
+                chord_arc_dist = radius - sqrt((radius * radius) - (current_a * current_a / 4));
+                
+                safenet_dist = current_a / 2 * cos(current_angle * 3.14 / 180);
+
+                if (safenet_dist < 0) {
+                    safenet_dist *= -1;
+                }
+
+                if (angular_vels[i] < 0)
+                {
+                    current_angle *= -1;
+                }
 
                 path_angle = (current_angle);
-
             }
-            
 
             double angle_check_interval;
 
 #ifdef DEBUG_DISPLAY
-            std::cout << "PATH DISTANCE CALCULATED WITH PATH ANGLE: " << path_angle << " , AND DISTANCE: "<< std::endl;
+            std::cout << "PATH DISTANCE CALCULATED WITH PATH ANGLE: " << path_angle << " , AND DISTANCE: " << std::endl;
 #endif
-            //if going left
+            // if going left
             if (path_angle > 0)
             {
-                //angle_check_interval = (180 - (path_angle/2)) / 10.0;
-                angle_check_interval = (5 * path_angle / 4) / 10.0;
+                // angle_check_interval = (180 - (path_angle/2)) / 10.0;
+                angle_check_interval = (path_angle) / 5.0;
+                double slope_m = tan((90 - path_angle) * 3.14f / 180.0f);
+                double longest_dist_angle = atan((chord_arc_dist + 0.1) / current_a) * 180 / 3.14;
 
                 for (int j = 0; j < 10; j++)
                 {
-                    double current_ang_vel = 90 + (path_angle / 4) - (j * angle_check_interval);
-                    //std::cout<<"LEFT angular_vels: "<<angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
+                    double current_ang_vel = 170 - (j * angle_check_interval);
+                    std::cout<<"LEFT: Iteration j: "<<j<<", angle interval: "<<angle_check_interval<<", current angle: "<<current_ang_vel<<", expected value of j*interval: "<<j*angle_check_interval<<std::endl;
+
+                    //if the furthest part of the visiblity box reached, slope the other way around
+                    if (current_ang_vel > longest_dist_angle && slope_m < 0)
+                    {
+                        slope_m *= -1;
+                    }
+
+                    double y = (safenet_dist * tan(int(current_ang_vel * 3.14 / 180)) / (1 - (tan(int(current_ang_vel) * 3.14 / 180) / tan(path_angle * 3.14 / 180))));
+
+                    double max_distance = safenet_dist + (-y * slope_m);
+                    //std::cout<<"Left: Safenet dist: "<<safenet_dist<<", slope_m: "<<slope_m<<", max_distance: "<<max_distance<<std::endl;
 
 
-                    if (ranges[2 * (int(current_ang_vel))] <= lookahead_dist_ + path_extra_space)
+                    if (ranges[int(current_ang_vel)] <= max_distance)
                     {
                         fail_array[i] = true;
-                        //std::cout << "left: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE index: "<<int(current_ang_vel)<< std::endl;
-                        j = 10;
+                        //std::cout << "left: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE index: "<<int(current_ang_vel)<<", for Max Distance: "<<max_distance<<std::endl;
                         break;
                     }
-                    else 
+                    else
                     {
                         fail_array[i] = false;
-                        //std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
+                        // std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
                     }
                 }
-            }//if going right
+            } // if going right
             else if (path_angle < 0)
             {
-                //angle_check_interval = (180 - (-path_angle/2)) / 10.0; //-path_angle because angle_check_interval needs to be positive
-                angle_check_interval = (5 * (-path_angle) / 4) / 10.0;
+                // angle_check_interval = (180 - (-path_angle/2)) / 10.0; //-path_angle because angle_check_interval needs to be positive
+                angle_check_interval = (-path_angle) / 5.0;
+                double slope_m = tan((90 - (-path_angle)) * 3.14f / 180.0f);
+                double longest_dist_angle = atan((chord_arc_dist + 0.1) / current_a) * 180 / 3.14;
 
                 for (int j = 0; j < 10; j++)
                 {
-                    double current_ang_vel = 90 - ((-path_angle) / 4) + (j * angle_check_interval);
-                    //std::cout<<"RIGHT angular_vels: "<<-angular_vels[i]<<", current_ang_vel: "<<int (current_ang_vel)<<", angle_check_interval: "<<angle_check_interval<<", path_angle: "<<path_angle<<std::endl;
+                    double current_ang_vel = 190 + (j * angle_check_interval);
+                    std::cout<<"RIGHT: Iteration j: "<<j<<", angle interval: "<<angle_check_interval<<", current angle: "<<current_ang_vel<<", expected value of j*interval: "<<j*angle_check_interval<<std::endl;
 
+                    if (current_ang_vel > longest_dist_angle && slope_m > 0)
+                    {
+                        slope_m *= -1;
+                    }
 
-                    if (ranges[2 * (int(current_ang_vel))] <= lookahead_dist_ + path_extra_space)
+                    double y = (safenet_dist * tan(int(current_ang_vel * 3.14 / 180)) / (1 - (tan(int(current_ang_vel) * 3.14 / 180) / tan(path_angle * 3.14 / 180))));
+
+                    double max_distance = safenet_dist + (y * slope_m);
+                    //std::cout<<"Right: Safenet dist: "<<safenet_dist<<", slope_m: "<<slope_m<<", max_distance: "<<max_distance<<std::endl;
+
+                    if (ranges[int(current_ang_vel)] <= max_distance)
                     {
 
-                        //std::cout << "right: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE: "<<int(current_ang_vel)<< std::endl;
-
+                        //std::cout << "right: FAILED PATH WITH ANGLE: " << angular_vels[i] <<", for RANGE index: "<<int(current_ang_vel)<<", for Max Distance: "<<max_distance<<std::endl;
 
                         fail_array[i] = true;
                         break;
                     }
                     else
                     {
-                        //std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
+                        // std::cout << "valid PATH WITH ANGLE: " << angular_vels[i] << std::endl;
                         fail_array[i] = false;
                     }
                 }
-            } 
-             else //handle straight line scenario
-             {       
-                int interval = 2;
-                for (int j = 0; j < 20; j++) {
+            }
+            else // handle straight line scenario
+            {
+                for (int j = 0; j < 20; j += 2)
+                {
 
-                    if (ranges[2 * (80 + (interval * j))] < robot_length) {
+                    double space_in_front = (robot_width / 2.0) / cos(75 + j);
+                    // std::cout<<"Space in front for straightline: "<<space_in_front<<std::endl;
+                    if (space_in_front > 0.3)
+                    {
+                        space_in_front = 0.3;
+                    }
+                    // std::cout<<"Range for current reading: "<<ranges[2 * (75 + j)]<<std::endl;
+
+                    if (ranges[2 * (75 + j)] < space_in_front)
+                    {
+                        // std::cout<<"Straight path obstacle detected"<<std::endl;
                         fail_array[i] = true;
                         break;
-                    } else {
+                    }
+                    else
+                    {
                         fail_array[i] = false;
                     }
-
                 }
-             }
-             
+            }
         }
 
-        if (partOfSpace == 4)
+        if (partOfSpace == 3) // back right
         {
             for (int i = 0; i < 9; i++)
             {
@@ -383,7 +435,7 @@ namespace local_planner
                 }
             }
         }
-        else if (partOfSpace == 3)
+        else if (partOfSpace == 4) // back left
         {
             for (int i = 8; i >= 0; i--)
             {
@@ -393,7 +445,7 @@ namespace local_planner
                 }
             }
         }
-        else
+        else // default
         {
             for (int i = 0; i < 4; i++)
             {
@@ -402,7 +454,7 @@ namespace local_planner
                     best_choice = i;
                 }
             }
-            
+
             for (int i = 8; i >= 4; i--)
             {
                 if (!fail_array[i])
@@ -410,9 +462,9 @@ namespace local_planner
                     best_choice = i;
                 }
             }
-            
         }
 
+        // std::cout << "Best choice index =" << best_choice << std::endl;
         geometry_msgs::msg::TwistStamped cmd_vel;
         cmd_vel.header.frame_id = pose.header.frame_id;
 
@@ -420,17 +472,25 @@ namespace local_planner
         {
             angular_vel = angular_vels[best_choice];
 
-
             cmd_vel.twist.linear.x = linear_vel * vel_factor;
             cmd_vel.twist.angular.z = angular_vel;
-        } else {
-            std::cout<<"No available paths: reversing"<<std::endl;
+            /*
+            std::cout << "Angular vel picked: " << angular_vel << ", from list of:" << std::endl;
+            for (int i = 0; i < 9; i++)
+            {
+                std::cout << angular_vels[i] << std::endl;
+            }
+            */
+        }
+        else
+        {
+            std::cout << "No available paths: reversing" << std::endl;
             cmd_vel.twist.linear.x = -linear_vel * vel_factor;
             cmd_vel.twist.angular.z = 0.0;
         }
 
         // cmd_vel.header.stamp = clock->now();
-
+        current_chosen_path_pub->publish(cmd_vel);
         return cmd_vel;
     }
 
