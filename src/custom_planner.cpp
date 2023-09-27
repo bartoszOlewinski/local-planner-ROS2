@@ -252,14 +252,11 @@ namespace local_planner
             
                 double path_angle_dbl = (((asin (goal_pose.position.x / radius)) * 180) / 3.14f);
                 path_angle = int (path_angle_dbl);
-                std::cout<<"Roth path angular vel: "<<angular_vels[i]<<", Linear vel: "<<linear_vel * vel_factor<<std::endl;
-                std::cout<<"Root path angle double: "<<path_angle_dbl<<", after conversion to int: "<<path_angle<<std::endl;
+                //std::cout<<"Roth path angular vel: "<<angular_vels[i]<<", Linear vel: "<<linear_vel * vel_factor<<std::endl;
+                //std::cout<<"Root path angle double: "<<path_angle_dbl<<", after conversion to int: "<<path_angle<<std::endl;
             } else {
                 int current_angle = 1;
-                //double current_length = 0.0;
-                //double previous_length = 0.0;
                 double current_a = 0.0;
-                //double current_x = 0.0;
 
                 if (radius < 0){
                     radius *= -1;
@@ -268,7 +265,7 @@ namespace local_planner
                 do {
                     current_a = 2 * radius * sin(current_angle * 3.14f / 180.0f);
 
-                    std::cout<<"Current_angle = "<<current_angle<<", Current_a = "<<current_a<<", Lookahead distance: "<<lookahead_dist_<<std::endl;
+                    //std::cout<<"Current_angle = "<<current_angle<<", Current_a = "<<current_a<<", Lookahead distance: "<<lookahead_dist_<<std::endl;
 
                     current_angle++;
 
@@ -283,16 +280,13 @@ namespace local_planner
             }
             
 
-
-
-
             double angle_check_interval;
 
 #ifdef DEBUG_DISPLAY
             std::cout << "PATH DISTANCE CALCULATED WITH PATH ANGLE: " << path_angle << " , AND DISTANCE: "<< std::endl;
 #endif
             //if going left
-            if (path_angle >= 0)
+            if (path_angle > 0)
             {
                 //angle_check_interval = (180 - (path_angle/2)) / 10.0;
                 angle_check_interval = (5 * path_angle / 4) / 10.0;
@@ -317,7 +311,7 @@ namespace local_planner
                     }
                 }
             }//if going right
-            else if (path_angle <= 0)
+            else if (path_angle < 0)
             {
                 //angle_check_interval = (180 - (-path_angle/2)) / 10.0; //-path_angle because angle_check_interval needs to be positive
                 angle_check_interval = (5 * (-path_angle) / 4) / 10.0;
@@ -343,7 +337,7 @@ namespace local_planner
                         fail_array[i] = false;
                     }
                 }
-            } /* //should be able to handle straight ahead without special case
+            } //should be able to handle straight ahead without special case
              else
              {       //should check for all
                  if (range[180] <= 1.0 + robot_length)
@@ -353,7 +347,7 @@ namespace local_planner
                      fail_array[i] = std::tuple<0, 1.0>;
                  }
              }
-             */
+             
         }
 
         if (partOfSpace == 4)
