@@ -86,7 +86,7 @@ namespace local_planner
 
 
 
-        double max_angular_vel = 1.8;
+        double max_angular_vel = 1.62;
         double wheel_base = 0.555;
         double robot_width = 0.67;
         double robot_length = 0.99;
@@ -97,7 +97,6 @@ namespace local_planner
         std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> global_pub_;
 
         // VARIABLES FOR THIS PLANNER
-        const int ADJACENT_PATH_CONSIDERATION_NUMBER = 20;
         float ranges[360];
         const int NUMBER_OF_LIDAR_READINGS = 360;
 

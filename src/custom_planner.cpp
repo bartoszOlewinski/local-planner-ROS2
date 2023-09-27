@@ -4,6 +4,7 @@
 #include <limits>
 #include <memory>
 #include <vector>
+#include <cmath>
 #include <utility>
 
 // includes for files
@@ -133,12 +134,12 @@ namespace local_planner
 
         // If the last pose is still within lookahed distance, take the last pose
         double vel_factor = 1.0;
-        double path_extra_space = 0.4;
+        double path_extra_space = 0.4; //SHOULD BE PARAMETRIZED
         if (goal_pose_it == transformed_plan.poses.end())
         {
             goal_pose_it = std::prev(transformed_plan.poses.end());
             // if the end pose is closer that 1.0m reduce vel_factor so the velocity of the robot is smaller
-            vel_factor = vel_reduction_factor;
+            vel_factor = 0.2;
 
             path_extra_space = 0.10;
         }
@@ -159,16 +160,10 @@ namespace local_planner
             if (goal_pose.position.y <= 0) // if it's on the right side or behind
             {
                 partOfSpace = 3;
-
-
-
             }
             else if (goal_pose.position.y >= 0) // if it's on the left side or behind
             {
-
                 partOfSpace = 4;
-
-
             }
         }
 #ifdef DEBUG_DISPLAY
@@ -195,9 +190,8 @@ namespace local_planner
         //========================================
 
         // if far ends then change path projections
-        // bool isEdgeCase = false;
-        // int root_path_index = 4; // 4 is default value
-        if (partOfSpace == 4)
+        int root_path_index = 4;
+        if (partOfSpace == 4) //left back side
         {
             angular_vels[0] = root_angular_vel + (8 * local_plan_rotation_rate);
             angular_vels[1] = root_angular_vel + (7 * local_plan_rotation_rate);
@@ -208,9 +202,9 @@ namespace local_planner
             angular_vels[6] = root_angular_vel + (2 * local_plan_rotation_rate);
             angular_vels[7] = root_angular_vel + (1 * local_plan_rotation_rate);
             angular_vels[8] = root_angular_vel;
-            // root_path_index = 8;
+            root_path_index = 8;
         }
-        else if (partOfSpace == 3)
+        else if (partOfSpace == 3) //right back side
         {
             angular_vels[8] = root_angular_vel - (7 * local_plan_rotation_rate);
             angular_vels[7] = root_angular_vel - (6 * local_plan_rotation_rate);
@@ -220,7 +214,7 @@ namespace local_planner
             angular_vels[2] = root_angular_vel - (2 * local_plan_rotation_rate);
             angular_vels[1] = root_angular_vel - (1 * local_plan_rotation_rate);
             angular_vels[0] = root_angular_vel;
-            // root_path_index = 0;
+            root_path_index = 0;
         }
         else
         {
@@ -239,14 +233,57 @@ namespace local_planner
         int best_choice = -1;
 
         bool fail_array[9];
-        // double path_distances[9];
+        
 
         // for each of the paths, check for obstacles
         for (int i = 0; i < 9; i++)
         {
             // calculate angle based on angular velocity that is currently considered
-            int max_path_angle = (int(angular_vels[i] * 180.0f / 3.14f));
-            int path_angle = max_path_angle / 2;
+            //int max_path_angle = (int(angular_vels[i] * 180.0f / 3.14f));
+            //int path_angle = max_path_angle / 2;
+        
+            int path_angle = 90;
+
+            
+            double radius = linear_vel / angular_vels[i];
+            if (i == root_path_index) {
+                //calculate the angle based off of available pose data for
+                //the root angular velocity
+            
+                double path_angle_dbl = (((asin (goal_pose.position.x / radius)) * 180) / 3.14f);
+                path_angle = int (path_angle_dbl);
+                std::cout<<"Roth path angular vel: "<<angular_vels[i]<<", Linear vel: "<<linear_vel * vel_factor<<std::endl;
+                std::cout<<"Root path angle double: "<<path_angle_dbl<<", after conversion to int: "<<path_angle<<std::endl;
+            } else {
+                int current_angle = 1;
+                //double current_length = 0.0;
+                //double previous_length = 0.0;
+                double current_a = 0.0;
+                //double current_x = 0.0;
+
+                if (radius < 0){
+                    radius *= -1;
+                }
+
+                do {
+                    current_a = 2 * radius * sin(current_angle * 3.14f / 180.0f);
+
+                    std::cout<<"Current_angle = "<<current_angle<<", Current_a = "<<current_a<<", Lookahead distance: "<<lookahead_dist_<<std::endl;
+
+                    current_angle++;
+
+                } while (current_a < lookahead_dist_);
+
+                    if (angular_vels[i] < 0) {
+                        current_angle *= -1;
+                    }
+
+                path_angle = (current_angle);
+
+            }
+            
+
+
 
 
             double angle_check_interval;
