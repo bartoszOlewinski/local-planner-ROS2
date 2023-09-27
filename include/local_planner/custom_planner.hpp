@@ -82,7 +82,7 @@ namespace local_planner
         int local_plan_projection_number;
         double vel_reduction_factor;
         double local_plan_rotation_rate_factor;
-        int local_plan_rotation_rate;
+        double local_plan_rotation_rate;
 
 
 

@@ -71,7 +71,7 @@ namespace local_planner
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".local_plan_rotation_rate_factor", rclcpp::ParameterValue(0.02));
         declare_parameter_if_not_declared(
-            node, plugin_name_ + ".local_plan_rotation_rate", rclcpp::ParameterValue(0));
+            node, plugin_name_ + ".local_plan_rotation_rate", rclcpp::ParameterValue(0.0));
         declare_parameter_if_not_declared(
             node, plugin_name_ + ".vel_reduction_factor", rclcpp::ParameterValue(0.4));
 
@@ -238,6 +238,7 @@ namespace local_planner
         // for each of the paths, check for obstacles
         for (int i = 0; i < 9; i++)
         {
+            std::cout<<"ANG velocities #"<<i<<"= "<<angular_vels[i]<<std::endl;
             // calculate angle based on angular velocity that is currently considered
             //int max_path_angle = (int(angular_vels[i] * 180.0f / 3.14f));
             //int path_angle = max_path_angle / 2;
@@ -252,8 +253,8 @@ namespace local_planner
             
                 double path_angle_dbl = (((asin (goal_pose.position.x / radius)) * 180) / 3.14f);
                 path_angle = int (path_angle_dbl);
-                //std::cout<<"Roth path angular vel: "<<angular_vels[i]<<", Linear vel: "<<linear_vel * vel_factor<<std::endl;
-                //std::cout<<"Root path angle double: "<<path_angle_dbl<<", after conversion to int: "<<path_angle<<std::endl;
+                std::cout<<"Roth path angular vel: "<<angular_vels[i]<<", Linear vel: "<<linear_vel * vel_factor<<std::endl;
+                std::cout<<"Root path angle double: "<<path_angle_dbl<<", after conversion to int: "<<path_angle<<std::endl;
             } else {
                 int current_angle = 1;
                 double current_a = 0.0;
@@ -337,15 +338,20 @@ namespace local_planner
                         fail_array[i] = false;
                     }
                 }
-            } //should be able to handle straight ahead without special case
-             else
-             {       //should check for all
-                 if (range[180] <= 1.0 + robot_length)
-                 { // going forward
-                     fail_array[i] = std::tuple<1, 1.0>;
-                 } else {
-                     fail_array[i] = std::tuple<0, 1.0>;
-                 }
+            } 
+             else //handle straight line scenario
+             {       
+                int interval = 2;
+                for (int j = 0; j < 20; j++) {
+
+                    if (ranges[2 * (80 + (interval * j))] < robot_length) {
+                        fail_array[i] = true;
+                        break;
+                    } else {
+                        fail_array[i] = false;
+                    }
+
+                }
              }
              
         }
