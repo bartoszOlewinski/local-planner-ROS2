@@ -521,7 +521,7 @@ namespace local_planner
             }
         }
 
-        std::cout << "Best choice index =" << best_choice << std::endl;
+        //std::cout << "Best choice index =" << best_choice << std::endl;
         geometry_msgs::msg::TwistStamped cmd_vel;
         cmd_vel.header.frame_id = pose.header.frame_id;
 
