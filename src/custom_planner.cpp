@@ -304,7 +304,7 @@ namespace local_planner
 
                 chord_arc_dist = radius - sqrt((radius * radius) - (current_a * current_a / 4));
                 
-                safenet_dist = current_a / 2 * cos(current_angle * 3.14 / 180);
+                safenet_dist = current_a * cos(current_angle * 3.14 / 180);
 
                 if (safenet_dist < 0) {
                     safenet_dist *= -1;
@@ -327,9 +327,9 @@ namespace local_planner
             if (path_angle > 0)
             {
                 // angle_check_interval = (180 - (path_angle/2)) / 10.0;
-                angle_check_interval = (path_angle) / 5.0;
+                angle_check_interval = (path_angle) / 10.0;
                 double slope_m = tan((90 - path_angle) * 3.14f / 180.0f);
-                double longest_dist_angle = atan((chord_arc_dist + 0.1) / current_a) * 180 / 3.14;
+                double longest_dist_angle = atan((chord_arc_dist + 0.4) / current_a) * 180 / 3.14;
 
                 for (int j = 0; j < 10; j++)
                 {
@@ -345,7 +345,7 @@ namespace local_planner
                     double y = (safenet_dist * tan(int(current_ang_vel * 3.14 / 180)) / (1 - (tan(int(current_ang_vel) * 3.14 / 180) / tan(path_angle * 3.14 / 180))));
 
                     double max_distance = safenet_dist + (-y * slope_m);
-                    //std::cout<<"Left: Safenet dist: "<<safenet_dist<<", slope_m: "<<slope_m<<", max_distance: "<<max_distance<<std::endl;
+                    std::cout<<i<<") Left: Safenet dist: "<<safenet_dist<<", slope_m: "<<slope_m<<", max_distance: "<<max_distance<<", angle: "<<current_ang_vel<<", range: "<<ranges[2 * int(current_ang_vel)]<<std::endl;
 
 
                     if (ranges[2 * int(current_ang_vel)] <= max_distance)
@@ -364,9 +364,9 @@ namespace local_planner
             else if (path_angle < 0)
             {
                 // angle_check_interval = (180 - (-path_angle/2)) / 10.0; //-path_angle because angle_check_interval needs to be positive
-                angle_check_interval = (-path_angle) / 5.0;
+                angle_check_interval = (-path_angle) / 10.0;
                 double slope_m = tan((90 - (-path_angle)) * 3.14f / 180.0f);
-                double longest_dist_angle = atan((chord_arc_dist + 0.1) / current_a) * 180 / 3.14;
+                double longest_dist_angle = atan((chord_arc_dist + 0.4) / current_a) * 180 / 3.14;
 
                 for (int j = 0; j < 10; j++)
                 {
@@ -378,10 +378,11 @@ namespace local_planner
                         slope_m *= -1;
                     }
 
-                    double y = (safenet_dist * tan(int(current_ang_vel * 3.14 / 180)) / (1 - (tan(int(current_ang_vel) * 3.14 / 180) / tan(path_angle * 3.14 / 180))));
+                    double y = (safenet_dist  * tan(int(current_ang_vel * 3.14 / 180)) / (1 - (tan(int(current_ang_vel) * 3.14 / 180) / tan(path_angle * 3.14 / 180))));
 
                     double max_distance = safenet_dist + (y * slope_m);
-                    //std::cout<<"Right: Safenet dist: "<<safenet_dist<<", slope_m: "<<slope_m<<", max_distance: "<<max_distance<<std::endl;
+
+                    std::cout<<i<<") Right: Safenet dist: "<<safenet_dist<<", slope_m: "<<slope_m<<", max_distance: "<<max_distance<<", angle: "<<current_ang_vel<<", range: "<<ranges[2 * int(current_ang_vel)]<<std::endl;
 
                     if (ranges[2 * int(current_ang_vel)] <= max_distance)
                     {
@@ -400,7 +401,7 @@ namespace local_planner
             }
             else // handle straight line scenario
             {
-                double basic_length = 0.5;
+                double basic_length = 1.5;
                 
                 for (int j = 0; j < 5; j += 2)
                 {
@@ -408,12 +409,12 @@ namespace local_planner
                     int angle = 80 + j;
 
                     double space_in_front = basic_length / cos(angle * 3.14 / 180);
-                    // std::cout<<"Space in front for straightline: "<<space_in_front<<std::endl;
+                    std::cout<<"Space in front for straightline: "<<space_in_front<<std::endl;
                     if (space_in_front > basic_length)
                     {
                         space_in_front = basic_length;
                     }
-                    // std::cout<<"Range for current reading: "<<ranges[2 * (75 + j)]<<std::endl;
+                    std::cout<<"Range for current reading: "<<ranges[2 * (75 + j)]<<std::endl;
 
                     if (ranges[2 * (angle)] < space_in_front)
                     {
@@ -493,7 +494,7 @@ namespace local_planner
             }
         }
 
-        // std::cout << "Best choice index =" << best_choice << std::endl;
+        std::cout << "Best choice index =" << best_choice << std::endl;
         geometry_msgs::msg::TwistStamped cmd_vel;
         cmd_vel.header.frame_id = pose.header.frame_id;
 
